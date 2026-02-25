@@ -1,0 +1,6 @@
+ALTER TABLE "Admin" RENAME TO "User";
+
+ALTER TABLE "Movies" DROP CONSTRAINT IF EXISTS "Movies_createdBy_fkey";
+ALTER TABLE "Movies"
+ADD CONSTRAINT "Movies_createdBy_fkey"
+FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

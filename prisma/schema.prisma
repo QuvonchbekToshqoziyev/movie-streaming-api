@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  FREEZED
+}
+
+enum PaymentMethod {
+  CARD
+  PAYPAL
+  BANK_TRANSFER
+}
+
+enum MovieQuality {
+  P240
+  P360
+  P480
+  P720
+  P1080
+  P4K
+}
+
+model Profile {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  full_name String
+  phone     String
+  country   String
+  avatar_url String   @default("")
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments Payment[]
+
+  profileSubscriptions ProfileSubscription[]
+
+  favorites Favorite[]
+
+  playlists Playlist[]
+
+  watchHistories watchHistory[]
+
+  reports Report[]
+
+  reviews Review[]
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  email      String   @unique
+  password   String
+  role       Role     @default(ADMIN)
+  status    Status   @default(ACTIVE)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  movies Movies[]
+}
+
+model SubscriptionPlan {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  price     Decimal
+  duration_days  Int
+  features  String[]
+  is_active Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userSubscriptions ProfileSubscription[]
+
+  payments Payment[]
+
+  categories Category[]
+
+  movies Movies[]
+}
+
+model ProfileSubscription {
+  id                 Int      @id @default(autoincrement())
+  profileId          Int
+  subscriptionPlanId Int
+  startDate          DateTime @default(now())
+  endDate            DateTime
+  status             SubscriptionStatus @default(ACTIVE)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id])
+  subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+
+  payments Payment[]
+}
+
+model Payment {
+  id                 Int      @id @default(autoincrement())
+  profile_id         Int
+  profileSubscriptionId Int
+  amount             Decimal
+  paymentDate        DateTime @default(now())
+  status             String
+  method             PaymentMethod
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  profile Profile @relation(fields: [profile_id], references: [id])
+  profileSubscription ProfileSubscription @relation(fields: [profileSubscriptionId], references: [id])
+
+  subscriptionPlans SubscriptionPlan[]
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  description String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptionPlans SubscriptionPlan[]
+
+  movieCategories MovieCategories[]
+}
+
+model Movies {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  description String
+  releaseDate DateTime
+  duration    Int
+  country     String
+  posterUrl  String
+  genre       String
+  rating      Float
+  subscriptionPlanId Int
+  subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+  viewCount   Int      @default(0)
+  createdBy   Int      
+  updatedAt   DateTime @updatedAt
+  user       User     @relation(fields: [createdBy], references: [id])
+
+  movieCategories MovieCategories[]
+
+  movieFiles MovieFile[]
+
+  favorites Favorite[]
+
+  playlistItems PlaylistItem[]
+
+  watchHistories watchHistory[]
+
+  reports Report[]
+
+  reviews Review[]
+}
+
+model MovieCategories {
+  id       Int      @id @default(autoincrement())
+  movieId  Int
+  categoryId Int
+
+  movie Movies @relation(fields: [movieId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([movieId, categoryId])
+}
+
+model MovieFile {
+  id      Int      @id @default(autoincrement())
+  quality MovieQuality
+  movieId  Int
+  fileUrl  String
+  language String @default("uzbek")
+
+  movie Movies @relation(fields: [movieId], references: [id])
+}
+
+model Favorite {
+  id      Int      @id @default(autoincrement())
+  profileId Int
+  movieId  Int
+
+  profile Profile @relation(fields: [profileId], references: [id])
+  movie Movies @relation(fields: [movieId], references: [id])
+
+  @@unique([profileId, movieId])
+}
+
+model Playlist {
+  id        Int      @id @default(autoincrement())
+  profileId Int
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id])
+
+  playlistItems PlaylistItem[]
+}
+model PlaylistItem {
+  id         Int      @id @default(autoincrement())
+  playlistId  Int
+  movieId     Int
+  addedAt     DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlistId], references: [id])
+  movie Movies @relation(fields: [movieId], references: [id])
+
+  @@unique([playlistId, movieId])
+}
+
+model watchHistory {
+  id         Int      @id @default(autoincrement())
+  profileId  Int
+  movieId     Int
+  watchDuration Int
+  watchPercentage Float
+  watchStatus String
+  watchedAt   DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id])
+  movie Movies @relation(fields: [movieId], references: [id])
+
+  @@unique([profileId, movieId])
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  profileId  Int
+  movieId     Int
+  reason      String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id])
+  movie Movies @relation(fields: [movieId], references: [id])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  profileId  Int
+  movieId     Int
+  rating      Float
+  comment     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id])
+  movie Movies @relation(fields: [movieId], references: [id])
+
+  @@unique([profileId, movieId])
+}
+
