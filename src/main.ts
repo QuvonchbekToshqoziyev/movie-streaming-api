@@ -25,7 +25,7 @@ async function bootstrap() {
     .addTag('Movies')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, documentFactory);
+  SwaggerModule.setup('swagger', app, documentFactory);
 
   await app.listen(process.env.PORT ?? 5050);
 }

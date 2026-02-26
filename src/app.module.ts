@@ -13,6 +13,8 @@ import { MoviesModule } from './modules/movies/movies.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { WatchHistoryModule } from './modules/watch-history/watch-history.module';
+import { PlaylistsModule } from './modules/playlists/playlists.module';
+import { PlaylistItemModule } from './modules/playlistItems/playlist.item.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { WatchHistoryModule } from './modules/watch-history/watch-history.module
     FavoritesModule,
     ReviewsModule,
     WatchHistoryModule,
+    PlaylistsModule,
+    PlaylistItemModule
   ],
   controllers: [],
   providers: [],

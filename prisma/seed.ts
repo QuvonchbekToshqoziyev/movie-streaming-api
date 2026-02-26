@@ -91,7 +91,7 @@ async function main() {
   }
   console.log(`✅ Created ${users.length} admin users`);
 
-  // ── 3. Create 4 subscription plans: Start, Pro, Extra Pro, Daxshat ──
+  // ── 3. Create 4 subscription plans ──
   const planData = [
     {
       name: 'Start',
@@ -118,7 +118,7 @@ async function main() {
       name: 'Daxshat',
       price: 99.99,
       duration_days: 365,
-      features: ['4K sifatli kinolar', 'Reklamasiz', 'Barcha kinolar', 'Offline yuklab olish', 'Bir nechta qurilma', 'Birinchi bo\'lib yangi kinolar'],
+      features: ['4K sifatli kinolar', 'Reklamasiz', 'Barcha kinolar', 'Offline yuklab olish', 'Bir nechta qurilma', "Birinchi bo'lib yangi kinolar"],
       allowed_qualities: [MovieQuality.P240, MovieQuality.P360, MovieQuality.P480, MovieQuality.P720, MovieQuality.P1080, MovieQuality.P4K],
     },
   ];
@@ -172,7 +172,7 @@ async function main() {
   }
   console.log(`✅ Created ${categories.length} categories`);
 
-  // ── 5. Create 20 movies (mix of FREE and PAID) ──
+  // ── 5. Create 20 movies ──
   const movieData = [
     { title: "Qasoskorlar: Abadiyat Jangi", slug: "qasoskorlar-abadiyat-jangi", description: "Qasoskorlar va ularning ittifoqchilari Yerning eng katta xavfi bilan to'qnashishadi.", releaseDate: new Date('2018-04-27'), duration: 149, country: 'USA', genre: 'Action', rating: 8.5, subIdx: 0, movieType: MovieType.FREE, categoryIdxs: [0, 7, 4] },
     { title: "Qasoskorlar: Yakuniy o'yin", slug: "qasoskorlar-yakuniy-oyin", description: "Qolgan Qasoskorlar Tanossiz o'z ishlarini tugallash uchun oxirgi marta birga ishlaydilar.", releaseDate: new Date('2019-04-26'), duration: 181, country: 'USA', genre: 'Action', rating: 8.7, subIdx: 1, movieType: MovieType.PAID, categoryIdxs: [0, 7, 2] },
@@ -272,18 +272,12 @@ async function main() {
   for (let i = 0; i < profiles.length; i++) {
     const favMovies = [movies[i % movies.length], movies[(i + 3) % movies.length]];
     for (const fm of favMovies) {
-      const existing = await prisma.favorite.findFirst({
-        where: { profileId: profiles[i].id, movieId: fm.id },
+      await prisma.favorite.upsert({
+        where: { profileId_movieId: { profileId: profiles[i].id, movieId: fm.id } },
+        update: {},
+        create: { profileId: profiles[i].id, movieId: fm.id },
       });
-      if (!existing) {
-        await prisma.favorite.create({
-          data: {
-            profileId: profiles[i].id,
-            movieId: fm.id,
-          },
-        });
-        favCount++;
-      }
+      favCount++;
     }
   }
   console.log(`✅ Created ${favCount} favorites`);
@@ -305,20 +299,17 @@ async function main() {
   let revCount = 0;
   for (let i = 0; i < profiles.length; i++) {
     const movieIdx = i % movies.length;
-    const existing = await prisma.review.findFirst({
-      where: { profileId: profiles[i].id, movieId: movies[movieIdx].id },
+    await prisma.review.upsert({
+      where: { profileId_movieId: { profileId: profiles[i].id, movieId: movies[movieIdx].id } },
+      update: {},
+      create: {
+        profileId: profiles[i].id,
+        movieId: movies[movieIdx].id,
+        rating: 3 + (i % 3),
+        comment: reviewComments[i],
+      },
     });
-    if (!existing) {
-      await prisma.review.create({
-        data: {
-          profileId: profiles[i].id,
-          movieId: movies[movieIdx].id,
-          rating: 3 + (i % 3),
-          comment: reviewComments[i],
-        },
-      });
-      revCount++;
-    }
+    revCount++;
   }
   console.log(`✅ Created ${revCount} reviews`);
 
@@ -327,58 +318,59 @@ async function main() {
   for (let i = 0; i < profiles.length; i++) {
     const movieIdx = i % movies.length;
     const movie = movies[movieIdx];
-    const existing = await prisma.watchHistory.findFirst({
-      where: { profileId: profiles[i].id, movieId: movie.id },
+    const watchPercentage = Math.min(60 + i * 4, 100); // capped at 100
+    await prisma.watchHistory.upsert({
+      where: { profileId_movieId: { profileId: profiles[i].id, movieId: movie.id } },
+      update: {},
+      create: {
+        profileId: profiles[i].id,
+        movieId: movie.id,
+        watchDuration: Math.floor(movie.duration * 0.7) + i * 5,
+        watchPercentage,
+        watchStatus: i % 3 === 0 ? 'completed' : 'watching',
+      },
     });
-    if (!existing) {
-      await prisma.watchHistory.create({
-        data: {
-          profileId: profiles[i].id,
-          movieId: movie.id,
-          watchDuration: Math.floor(movie.duration * 0.7) + i * 5,
-          watchPercentage: 60 + i * 4,
-          watchStatus: i % 3 === 0 ? 'completed' : 'watching',
-        },
-      });
-      whCount++;
-    }
+    whCount++;
   }
   console.log(`✅ Created ${whCount} watch history entries`);
 
-  // ── 11. Add subscriptions (some active, some expired, some pending) ──
+  // ── 11. Add subscriptions — clear first to avoid duplicates on re-run ──
+  await prisma.payment.deleteMany({});
+  await prisma.profileSubscription.deleteMany({});
+
   const subscriptions: ProfileSubscription[] = [];
   for (let i = 0; i < profiles.length; i++) {
     const planIdx = i % plans.length;
     const startDate = new Date();
     const endDate = new Date();
 
-    // Vary statuses: first 6 active, next 2 expired, last 2 pending
     let status: SubscriptionStatus;
     if (i < 6) {
       status = SubscriptionStatus.ACTIVE;
       endDate.setDate(endDate.getDate() + plans[planIdx].duration_days + 30);
     } else if (i < 8) {
       status = SubscriptionStatus.EXPIRED;
-      endDate.setDate(endDate.getDate() - 10); // already expired
+      endDate.setDate(endDate.getDate() - 10);
     } else {
       status = SubscriptionStatus.PENDING_PAYMENT;
       endDate.setDate(endDate.getDate() + plans[planIdx].duration_days);
     }
 
-    const sub = await prisma.profileSubscription.create({
-      data: {
-        profileId: profiles[i].id,
-        subscriptionPlanId: plans[planIdx].id,
-        startDate: startDate,
-        endDate: endDate,
-        status: status,
-      },
-    });
-    subscriptions.push(sub);
+    subscriptions.push(
+      await prisma.profileSubscription.create({
+        data: {
+          profileId: profiles[i].id,
+          subscriptionPlanId: plans[planIdx].id,
+          startDate,
+          endDate,
+          status,
+        },
+      }),
+    );
   }
   console.log(`✅ Created ${subscriptions.length} profile subscriptions`);
 
-  // ── 12. Add payments (status matches subscription status) ──
+  // ── 12. Add payments ──
   let payCount = 0;
   const methods = [PaymentMethod.CARD, PaymentMethod.PAYPAL, PaymentMethod.BANK_TRANSFER];
   for (let i = 0; i < subscriptions.length; i++) {
@@ -404,36 +396,54 @@ async function main() {
   }
   console.log(`✅ Created ${payCount} payments`);
 
-  // ── 13. Create a couple of playlists ──
+  // ── 13. Create playlists (safe for re-runs) ──
+  await prisma.playlistItem.deleteMany({});
+  await prisma.playlist.deleteMany({});
+
   const playlist1 = await prisma.playlist.create({
-    data: {
-      profileId: profiles[0].id,
-      name: 'Sevimli Filmlar',
-    },
+    data: { profileId: profiles[0].id, name: 'Sevimli Filmlar' },
   });
   const playlist2 = await prisma.playlist.create({
-    data: {
-      profileId: profiles[1].id,
-      name: 'Keyinroq Korish',
-    },
+    data: { profileId: profiles[1].id, name: 'Keyinroq Korish' },
   });
 
-  // Add items to playlists
   for (let i = 0; i < 5; i++) {
     await prisma.playlistItem.create({
-      data: {
-        playlistId: playlist1.id,
-        movieId: movies[i].id,
-      },
+      data: { playlistId: playlist1.id, movieId: movies[i].id },
     });
     await prisma.playlistItem.create({
-      data: {
-        playlistId: playlist2.id,
-        movieId: movies[i + 5].id,
-      },
+      data: { playlistId: playlist2.id, movieId: movies[i + 5].id },
     });
   }
   console.log('✅ Created 2 playlists with items');
+
+  // ── 14. Add reports ──
+  const reportReasons = [
+    'Noto\'g\'ri kontent',
+    'Mualliflik huquqi buzilishi',
+    'Spam',
+    'Zo\'ravonlik',
+    'Boshqa sabab',
+  ];
+
+  let reportCount = 0;
+  for (let i = 0; i < 5; i++) {
+    const existing = await prisma.report.findFirst({
+      where: { profileId: profiles[i].id, movieId: movies[i].id },
+    });
+    if (!existing) {
+      await prisma.report.create({
+        data: {
+          profileId: profiles[i].id,
+          movieId: movies[i].id,
+          reason: reportReasons[i],
+          description: `${reportReasons[i]} sababli bu film haqida shikoyat qilinmoqda.`,
+        },
+      });
+      reportCount++;
+    }
+  }
+  console.log(`✅ Created ${reportCount} reports`);
 
   console.log('\n🎉 Database seeding completed successfully!');
 }
