@@ -1,12 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
 import { QueryMovieDto } from './dto/query-movie.dto';
+import { MovieType, SubscriptionStatus } from '@prisma/client';
 
 @Injectable()
 export class MoviesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private generateSlug(title: string): string {
     return title
@@ -15,6 +16,28 @@ export class MoviesService {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
+  }
+
+  /**
+   * Check if a profile has an active subscription.
+   * Returns the subscription with plan details, or null.
+   */
+  private async getActiveSubscription(profileId: number | null) {
+    if (!profileId) return null;
+
+    const sub = await this.prisma.profileSubscription.findFirst({
+      where: {
+        profileId,
+        status: SubscriptionStatus.ACTIVE,
+        endDate: { gte: new Date() },
+      },
+      include: {
+        subscriptionPlan: true,
+      },
+      orderBy: { endDate: 'desc' },
+    });
+
+    return sub;
   }
 
   async create(dto: CreateMovieDto, createdBy: number) {
@@ -28,6 +51,7 @@ export class MoviesService {
         releaseDate: new Date(dto.releaseDate),
         posterUrl: dto.posterUrl || '',
         rating: dto.rating || 0,
+        movieType: dto.movieType || MovieType.FREE,
         createdBy,
         movieCategories: categoryIds?.length
           ? { create: categoryIds.map((categoryId) => ({ categoryId })) }
@@ -46,9 +70,11 @@ export class MoviesService {
     };
   }
 
-  async findAll(query: QueryMovieDto) {
+  async findAll(query: QueryMovieDto, profileId: number | null = null) {
     const { page = 1, limit = 20, category, search, subscription_type } = query;
     const skip = (page - 1) * limit;
+
+    const activeSub = await this.getActiveSubscription(profileId);
 
     const where: any = {};
 
@@ -63,12 +89,11 @@ export class MoviesService {
     }
 
     if (subscription_type) {
-      // free = subscriptionPlan with price 0, premium = price > 0
-      if (subscription_type === 'free') {
-        where.subscriptionPlan = { price: 0 };
-      } else if (subscription_type === 'premium') {
-        where.subscriptionPlan = { price: { gt: 0 } };
-      }
+      // Explicit filter from query param
+      where.movieType = subscription_type.toUpperCase() === 'PAID' ? MovieType.PAID : MovieType.FREE;
+    } else if (!activeSub) {
+      // No active subscription → only show FREE movies
+      where.movieType = MovieType.FREE;
     }
 
     const [movies, total] = await Promise.all([
@@ -91,7 +116,7 @@ export class MoviesService {
         movies: movies.map((m) => ({
           ...m,
           categories: m.movieCategories.map((mc) => mc.category.name),
-          subscription_type: Number(m.subscriptionPlan.price) === 0 ? 'free' : 'premium',
+          subscription_type: m.movieType,
         })),
         pagination: {
           total,
@@ -103,13 +128,13 @@ export class MoviesService {
     };
   }
 
-  async findBySlug(slug: string) {
+  async findBySlug(slug: string, profileId: number | null = null) {
     const movie = await this.prisma.movies.findUnique({
       where: { slug },
       include: {
         movieCategories: { include: { category: true } },
         movieFiles: true,
-        subscriptionPlan: { select: { id: true, name: true, price: true } },
+        subscriptionPlan: { select: { id: true, name: true, price: true, allowed_qualities: true } },
         reviews: {
           select: { rating: true },
         },
@@ -117,6 +142,13 @@ export class MoviesService {
     });
 
     if (!movie) throw new NotFoundException('Kino topilmadi');
+
+    // If movie is PAID, check that user has an active subscription
+    const activeSub = await this.getActiveSubscription(profileId);
+
+    if (movie.movieType === MovieType.PAID && !activeSub) {
+      throw new ForbiddenException('Bu kinoni ko\'rish uchun obuna kerak. Iltimos, obuna sotib oling.');
+    }
 
     // Increment view count
     await this.prisma.movies.update({
@@ -129,13 +161,21 @@ export class MoviesService {
         ? movie.reviews.reduce((sum, r) => sum + r.rating, 0) / movie.reviews.length
         : 0;
 
+    // Filter movie files by subscription plan's allowed qualities
+    let files = movie.movieFiles;
+    if (activeSub && activeSub.subscriptionPlan.allowed_qualities.length > 0) {
+      files = files.filter((f) =>
+        activeSub.subscriptionPlan.allowed_qualities.includes(f.quality),
+      );
+    }
+
     return {
       success: true,
       data: {
         ...movie,
         categories: movie.movieCategories.map((mc) => mc.category.name),
-        subscription_type: Number(movie.subscriptionPlan.price) === 0 ? 'free' : 'premium',
-        files: movie.movieFiles.map((f) => ({
+        subscription_type: movie.movieType,
+        files: files.map((f) => ({
           quality: f.quality,
           language: f.language,
           file_url: f.fileUrl,
@@ -223,7 +263,8 @@ export class MoviesService {
           title: m.title,
           slug: m.slug,
           releaseDate: m.releaseDate,
-          subscription_type: Number(m.subscriptionPlan.price) === 0 ? 'free' : 'premium',
+          movieType: m.movieType,
+          subscription_type: m.movieType,
           viewCount: m.viewCount,
           review_count: m._count.reviews,
           favorite_count: m._count.favorites,
@@ -252,3 +293,4 @@ export class MoviesService {
     };
   }
 }
+

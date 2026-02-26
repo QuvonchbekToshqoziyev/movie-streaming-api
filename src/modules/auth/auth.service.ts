@@ -11,7 +11,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(dto: CreateUserDto) {
     const existinguser = await this.prisma.user.findFirst({
@@ -31,9 +31,6 @@ export class AuthService {
         email: dto.email,
         username: dto.username,
         password: hashedPassword,
-        full_name: '',
-        phone: '',
-        country: '',
       },
       select: {
         id: true,
@@ -101,8 +98,8 @@ export class AuthService {
   async logout(response: Response) {
     response.clearCookie('access_token');
     return {
-       "success": true,
-       "message": "Muvaffaqiyatli tizimdan chiqildi"
-     };
+      "success": true,
+      "message": "Muvaffaqiyatli tizimdan chiqildi"
+    };
   }
 }

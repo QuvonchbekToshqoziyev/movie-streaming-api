@@ -9,23 +9,25 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateMovieFileDto } from './dto/create-movie-file.dto';
+import { OptionalJwtGuard } from '../../common/guards/optional-jwt.guard';
 
 // ── Public Movie Endpoints ──
 @ApiTags('Movies')
 @Controller('movies')
+@UseGuards(OptionalJwtGuard)
 export class MoviesController {
-  constructor(private readonly moviesService: MoviesService) {}
+  constructor(private readonly moviesService: MoviesService) { }
 
   @Get()
   @ApiOperation({ summary: 'Barcha kinolar (pagination, search, filter)' })
-  findAll(@Query() query: QueryMovieDto) {
-    return this.moviesService.findAll(query);
+  findAll(@Query() query: QueryMovieDto, @CurrentUser('sub') profileId: number | null) {
+    return this.moviesService.findAll(query, profileId);
   }
 
   @Get(':slug')
   @ApiOperation({ summary: 'Kinoni slug bo\'yicha olish' })
-  findBySlug(@Param('slug') slug: string) {
-    return this.moviesService.findBySlug(slug);
+  findBySlug(@Param('slug') slug: string, @CurrentUser('sub') profileId: number | null) {
+    return this.moviesService.findBySlug(slug, profileId);
   }
 }
 
@@ -36,7 +38,7 @@ export class MoviesController {
 @Roles('ADMIN', 'SUPERADMIN')
 @ApiBearerAuth('access-token')
 export class AdminMoviesController {
-  constructor(private readonly moviesService: MoviesService) {}
+  constructor(private readonly moviesService: MoviesService) { }
 
   @Get()
   @ApiOperation({ summary: 'Admin: barcha kinolar ro\'yxati' })

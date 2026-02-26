@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { PaymentMethod } from '@prisma/client';
-import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { PaymentMethod, PaymentStatus } from '@prisma/client';
+import { IsEnum, IsInt, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreatePaymentDto {
@@ -19,10 +19,9 @@ export class CreatePaymentDto {
   @Type(() => Number)
   amount!: number;
 
-  @ApiProperty({ example: 'COMPLETED' })
-  @IsString()
-  @IsNotEmpty()
-  status!: string;
+  @ApiProperty({ enum: PaymentStatus, example: PaymentStatus.PENDING })
+  @IsEnum(PaymentStatus)
+  status!: PaymentStatus;
 
   @ApiProperty({ enum: PaymentMethod, example: PaymentMethod.CARD })
   @IsEnum(PaymentMethod)

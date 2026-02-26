@@ -16,6 +16,22 @@ enum SubscriptionStatus {
   ACTIVE
   INACTIVE
   EXPIRED
+  CANCELED
+  PENDING_PAYMENT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+  REFUNDED
+  CANCELED
+  REMOVED
+}
+
+enum MovieType {
+  FREE
+  PAID
 }
 
 enum Status {
@@ -87,6 +103,7 @@ model SubscriptionPlan {
   price     Decimal
   duration_days  Int
   features  String[]
+  allowed_qualities MovieQuality[]
   is_active Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -122,7 +139,7 @@ model Payment {
   profileSubscriptionId Int
   amount             Decimal
   paymentDate        DateTime @default(now())
-  status             String
+  status             PaymentStatus @default(PENDING)
   method             PaymentMethod
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -157,6 +174,7 @@ model Movies {
   posterUrl  String
   genre       String
   rating      Float
+  movieType   MovieType @default(FREE)
   subscriptionPlanId Int
   subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
   viewCount   Int      @default(0)

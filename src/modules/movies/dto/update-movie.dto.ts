@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
+import { MovieType } from '@prisma/client';
 
 export class UpdateMovieDto {
   @ApiPropertyOptional({ example: 'Yangilangan sarlavha' })
@@ -49,6 +50,11 @@ export class UpdateMovieDto {
   @IsOptional()
   @Type(() => Number)
   subscriptionPlanId?: number;
+
+  @ApiPropertyOptional({ enum: MovieType, example: MovieType.PAID })
+  @IsEnum(MovieType)
+  @IsOptional()
+  movieType?: MovieType;
 
   @ApiPropertyOptional({ example: [1, 2], description: 'Category IDs' })
   @IsArray()
