@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateWatchHistoryDto {
@@ -20,7 +27,10 @@ export class CreateWatchHistoryDto {
   @Max(100)
   watchPercentage!: number;
 
-  @ApiPropertyOptional({ example: 'watching', description: 'watching / completed / paused' })
+  @ApiPropertyOptional({
+    example: 'watching',
+    description: 'watching / completed / paused',
+  })
   @IsString()
   @IsOptional()
   watchStatus?: string = 'watching';

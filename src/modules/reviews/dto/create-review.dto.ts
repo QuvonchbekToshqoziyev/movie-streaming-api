@@ -10,7 +10,7 @@ export class CreateReviewDto {
   @Type(() => Number)
   rating!: number;
 
-  @ApiProperty({ example: 'Juda ajoyib film, ko\'rishni tavsiya etaman!' })
+  @ApiProperty({ example: "Juda ajoyib film, ko'rishni tavsiya etaman!" })
   @IsString()
   @IsNotEmpty()
   comment!: string;

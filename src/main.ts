@@ -1,4 +1,3 @@
-
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -15,7 +14,6 @@ async function bootstrap() {
   app.setGlobalPrefix('api', { exclude: [] });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-
   const config = new DocumentBuilder()
     .setTitle('Movie Streaming API')
     .setDescription('API documentation for the Movie Streaming application')
@@ -28,7 +26,6 @@ async function bootstrap() {
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, documentFactory);
-
 
   await app.listen(process.env.PORT ?? 5050);
 }

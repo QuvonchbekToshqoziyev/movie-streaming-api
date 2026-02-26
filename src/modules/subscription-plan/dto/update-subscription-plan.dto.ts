@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { MovieQuality } from '@prisma/client';
 
@@ -27,7 +34,10 @@ export class UpdateSubscriptionPlanDto {
   @IsOptional()
   features?: string[];
 
-  @ApiPropertyOptional({ example: ['P240', 'P360', 'P480', 'P720'], description: 'Allowed video qualities' })
+  @ApiPropertyOptional({
+    example: ['P240', 'P360', 'P480', 'P720'],
+    description: 'Allowed video qualities',
+  })
   @IsArray()
   @IsEnum(MovieQuality, { each: true })
   @IsOptional()
@@ -38,4 +48,3 @@ export class UpdateSubscriptionPlanDto {
   @IsOptional()
   is_active?: boolean;
 }
-

@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProfileSubscriptionsService } from './profile-subscriptions.service';
 import { CreateProfileSubscriptionDto } from './dto/create-profile-subscription.dto';
@@ -10,7 +20,9 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class ProfileSubscriptionsController {
-  constructor(private readonly profileSubscriptionsService: ProfileSubscriptionsService) {}
+  constructor(
+    private readonly profileSubscriptionsService: ProfileSubscriptionsService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new profile subscription' })
@@ -38,7 +50,10 @@ export class ProfileSubscriptionsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update profile subscription by ID' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProfileSubscriptionDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProfileSubscriptionDto,
+  ) {
     return this.profileSubscriptionsService.update(id, dto);
   }
 

@@ -9,7 +9,7 @@ export class UpdateMovieDto {
   @IsOptional()
   title?: string;
 
-  @ApiPropertyOptional({ example: 'Yangilangan ta\'rif' })
+  @ApiPropertyOptional({ example: "Yangilangan ta'rif" })
   @IsString()
   @IsOptional()
   description?: string;

@@ -15,22 +15,32 @@ export class ProfileSubscriptionsService {
         endDate: new Date(dto.endDate),
         status: dto.status,
       },
-      include: { profile: { select: { id: true, username: true, email: true } }, subscriptionPlan: true },
+      include: {
+        profile: { select: { id: true, username: true, email: true } },
+        subscriptionPlan: true,
+      },
     });
   }
 
   findAll() {
     return this.prisma.profileSubscription.findMany({
-      include: { profile: { select: { id: true, username: true, email: true } }, subscriptionPlan: true },
+      include: {
+        profile: { select: { id: true, username: true, email: true } },
+        subscriptionPlan: true,
+      },
     });
   }
 
   async findOne(id: number) {
     const sub = await this.prisma.profileSubscription.findUnique({
       where: { id },
-      include: { profile: { select: { id: true, username: true, email: true } }, subscriptionPlan: true },
+      include: {
+        profile: { select: { id: true, username: true, email: true } },
+        subscriptionPlan: true,
+      },
     });
-    if (!sub) throw new NotFoundException(`Profile subscription #${id} not found`);
+    if (!sub)
+      throw new NotFoundException(`Profile subscription #${id} not found`);
     return sub;
   }
 
@@ -48,7 +58,10 @@ export class ProfileSubscriptionsService {
     return this.prisma.profileSubscription.update({
       where: { id },
       data,
-      include: { profile: { select: { id: true, username: true, email: true } }, subscriptionPlan: true },
+      include: {
+        profile: { select: { id: true, username: true, email: true } },
+        subscriptionPlan: true,
+      },
     });
   }
 

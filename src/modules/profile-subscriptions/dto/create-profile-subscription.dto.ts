@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SubscriptionStatus } from '@prisma/client';
-import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateProfileSubscriptionDto {
@@ -19,7 +25,10 @@ export class CreateProfileSubscriptionDto {
   @IsNotEmpty()
   endDate!: string;
 
-  @ApiPropertyOptional({ enum: SubscriptionStatus, default: SubscriptionStatus.ACTIVE })
+  @ApiPropertyOptional({
+    enum: SubscriptionStatus,
+    default: SubscriptionStatus.ACTIVE,
+  })
   @IsEnum(SubscriptionStatus)
   @IsOptional()
   status?: SubscriptionStatus;

@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -31,7 +40,7 @@ export class ReviewsController {
   @Delete(':reviewId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Sharhni o\'chirish' })
+  @ApiOperation({ summary: "Sharhni o'chirish" })
   remove(
     @Param('movieId', ParseIntPipe) movieId: number,
     @Param('reviewId', ParseIntPipe) reviewId: number,

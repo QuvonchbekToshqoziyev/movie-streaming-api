@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProfilesService } from './profiles.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
@@ -25,7 +35,10 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update current user profile' })
-  updateMyProfile(@CurrentUser('sub') profileId: number, @Body() dto: UpdateProfileDto) {
+  updateMyProfile(
+    @CurrentUser('sub') profileId: number,
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.profilesService.update(profileId, dto);
   }
 

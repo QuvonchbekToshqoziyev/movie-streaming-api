@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -28,7 +32,8 @@ export class FavoritesService {
       data: {
         movies: favorites.map((f) => ({
           ...f.movie,
-          subscription_type: Number(f.movie.subscriptionPlan.price) === 0 ? 'free' : 'premium',
+          subscription_type:
+            Number(f.movie.subscriptionPlan.price) === 0 ? 'free' : 'premium',
         })),
         total: favorites.length,
       },
@@ -36,7 +41,9 @@ export class FavoritesService {
   }
 
   async add(profileId: number, movieId: number) {
-    const movie = await this.prisma.movies.findUnique({ where: { id: movieId } });
+    const movie = await this.prisma.movies.findUnique({
+      where: { id: movieId },
+    });
     if (!movie) throw new NotFoundException('Kino topilmadi');
 
     const existing = await this.prisma.favorite.findUnique({
@@ -51,7 +58,7 @@ export class FavoritesService {
 
     return {
       success: true,
-      message: 'Kino sevimlilar ro\'yxatiga qo\'shildi',
+      message: "Kino sevimlilar ro'yxatiga qo'shildi",
       data: {
         id: favorite.id,
         movie_id: favorite.movieId,
@@ -72,7 +79,7 @@ export class FavoritesService {
 
     return {
       success: true,
-      message: 'Kino sevimlilar ro\'yxatidan o\'chirildi',
+      message: "Kino sevimlilar ro'yxatidan o'chirildi",
     };
   }
 }

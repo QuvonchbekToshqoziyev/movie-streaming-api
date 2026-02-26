@@ -1,0 +1,60 @@
+﻿
+N:\study\4-oy\final\src\common\decorators\current-user.decorator.ts
+  5:11  error  Unsafe assignment of an `any` value            @typescript-eslint/no-unsafe-assignment
+  6:11  error  Unsafe assignment of an `any` value            @typescript-eslint/no-unsafe-assignment
+  6:26  error  Unsafe member access .user on an `any` value   @typescript-eslint/no-unsafe-member-access
+  7:5   error  Unsafe return of a value of type `any`         @typescript-eslint/no-unsafe-return
+  7:26  error  Unsafe member access [data] on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+N:\study\4-oy\final\src\common\guards\jwt-auth.guard.ts
+  23:13  error  Unsafe assignment of an `any` value     @typescript-eslint/no-unsafe-assignment
+  26:7   error  Unsafe assignment of an `any` value     @typescript-eslint/no-unsafe-assignment
+  41:5   error  Unsafe return of a value of type `any`  @typescript-eslint/no-unsafe-return
+
+N:\study\4-oy\final\src\common\guards\optional-jwt.guard.ts
+  19:13  error  Unsafe assignment of an `any` value     @typescript-eslint/no-unsafe-assignment
+  22:7   error  Unsafe assignment of an `any` value     @typescript-eslint/no-unsafe-assignment
+  35:5   error  Unsafe return of a value of type `any`  @typescript-eslint/no-unsafe-return
+
+N:\study\4-oy\final\src\common\guards\roles.guard.ts
+  24:11  error  Unsafe assignment of an `any` value           @typescript-eslint/no-unsafe-assignment
+  25:16  error  Unsafe member access .role on an `any` value  @typescript-eslint/no-unsafe-member-access
+  30:17  error  Unsafe call of an `any` typed value           @typescript-eslint/no-unsafe-call
+  30:22  error  Unsafe member access .role on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+N:\study\4-oy\final\src\main.ts
+  32:1  warning  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+
+N:\study\4-oy\final\src\modules\admins\admins.service.ts
+  68:28  error  Unsafe member access .password on an `any` value  @typescript-eslint/no-unsafe-member-access
+  71:7   error  Unsafe assignment of an `any` value               @typescript-eslint/no-unsafe-assignment
+
+N:\study\4-oy\final\src\modules\auth\auth.controller.ts
+  2:19  error  'ApiOperation' is defined but never used  @typescript-eslint/no-unused-vars
+
+N:\study\4-oy\final\src\modules\auth\auth.service.ts
+  102:3  error  Async method 'logout' has no 'await' expression  @typescript-eslint/require-await
+
+N:\study\4-oy\final\src\modules\movies\movies.service.ts
+   86:13  error  Unsafe member access .title on an `any` value            @typescript-eslint/no-unsafe-member-access
+   90:13  error  Unsafe member access .movieCategories on an `any` value  @typescript-eslint/no-unsafe-member-access
+   97:13  error  Unsafe member access .movieType on an `any` value        @typescript-eslint/no-unsafe-member-access
+  103:13  error  Unsafe member access .movieType on an `any` value        @typescript-eslint/no-unsafe-member-access
+  108:9   error  Unsafe assignment of an `any` value                      @typescript-eslint/no-unsafe-assignment
+  121:34  error  Unsafe assignment of an `any` value                      @typescript-eslint/no-unsafe-assignment
+  231:31  error  Unsafe member access .releaseDate on an `any` value      @typescript-eslint/no-unsafe-member-access
+  232:25  error  Unsafe member access .slug on an `any` value             @typescript-eslint/no-unsafe-member-access
+  237:12  error  Unsafe member access .movieCategories on an `any` value  @typescript-eslint/no-unsafe-member-access
+  244:7   error  Unsafe assignment of an `any` value                      @typescript-eslint/no-unsafe-assignment
+  310:9   error  Unsafe assignment of an `any` value                      @typescript-eslint/no-unsafe-assignment
+
+N:\study\4-oy\final\src\modules\profile-subscriptions\profile-subscriptions.service.ts
+  57:27  error  Unsafe member access .endDate on an `any` value  @typescript-eslint/no-unsafe-member-access
+  60:7   error  Unsafe assignment of an `any` value              @typescript-eslint/no-unsafe-assignment
+
+N:\study\4-oy\final\src\modules\profiles\profiles.service.ts
+  80:28  error  Unsafe member access .password on an `any` value  @typescript-eslint/no-unsafe-member-access
+  83:7   error  Unsafe assignment of an `any` value               @typescript-eslint/no-unsafe-assignment
+
+✖ 35 problems (34 errors, 1 warning)
+

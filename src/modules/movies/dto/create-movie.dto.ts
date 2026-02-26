@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { MovieType } from '@prisma/client';
 
@@ -9,7 +16,7 @@ export class CreateMovieDto {
   @IsNotEmpty()
   title!: string;
 
-  @ApiProperty({ example: 'Film haqida batafsil ma\'lumot' })
+  @ApiProperty({ example: "Film haqida batafsil ma'lumot" })
   @IsString()
   @IsNotEmpty()
   description!: string;
@@ -49,7 +56,11 @@ export class CreateMovieDto {
   @Type(() => Number)
   subscriptionPlanId!: number;
 
-  @ApiPropertyOptional({ enum: MovieType, example: MovieType.FREE, default: MovieType.FREE })
+  @ApiPropertyOptional({
+    enum: MovieType,
+    example: MovieType.FREE,
+    default: MovieType.FREE,
+  })
   @IsEnum(MovieType)
   @IsOptional()
   movieType?: MovieType;

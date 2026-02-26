@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FavoritesService } from './favorites.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -22,20 +31,23 @@ export class FavoritesController {
   constructor(private readonly favoritesService: FavoritesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Sevimli kinolar ro\'yxati' })
+  @ApiOperation({ summary: "Sevimli kinolar ro'yxati" })
   findAll(@CurrentUser('sub') profileId: number) {
     return this.favoritesService.findAll(profileId);
   }
 
   @Post()
-  @ApiOperation({ summary: 'Kinoni sevimlilarga qo\'shish' })
+  @ApiOperation({ summary: "Kinoni sevimlilarga qo'shish" })
   add(@CurrentUser('sub') profileId: number, @Body() dto: AddFavoriteDto) {
     return this.favoritesService.add(profileId, dto.movie_id);
   }
 
   @Delete(':movieId')
-  @ApiOperation({ summary: 'Kinoni sevimlilardan o\'chirish' })
-  remove(@CurrentUser('sub') profileId: number, @Param('movieId', ParseIntPipe) movieId: number) {
+  @ApiOperation({ summary: "Kinoni sevimlilardan o'chirish" })
+  remove(
+    @CurrentUser('sub') profileId: number,
+    @Param('movieId', ParseIntPipe) movieId: number,
+  ) {
     return this.favoritesService.remove(profileId, movieId);
   }
 }

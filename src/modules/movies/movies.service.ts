@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
@@ -7,7 +11,7 @@ import { MovieType, SubscriptionStatus } from '@prisma/client';
 
 @Injectable()
 export class MoviesService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   private generateSlug(title: string): string {
     return title
@@ -18,10 +22,6 @@ export class MoviesService {
       .trim();
   }
 
-  /**
-   * Check if a profile has an active subscription.
-   * Returns the subscription with plan details, or null.
-   */
   private async getActiveSubscription(profileId: number | null) {
     if (!profileId) return null;
 
@@ -65,7 +65,7 @@ export class MoviesService {
 
     return {
       success: true,
-      message: 'Yangi kino muvaffaqiyatli qo\'shildi',
+      message: "Yangi kino muvaffaqiyatli qo'shildi",
       data: movie,
     };
   }
@@ -89,10 +89,11 @@ export class MoviesService {
     }
 
     if (subscription_type) {
-      // Explicit filter from query param
-      where.movieType = subscription_type.toUpperCase() === 'PAID' ? MovieType.PAID : MovieType.FREE;
+      where.movieType =
+        subscription_type.toUpperCase() === 'PAID'
+          ? MovieType.PAID
+          : MovieType.FREE;
     } else if (!activeSub) {
-      // No active subscription → only show FREE movies
       where.movieType = MovieType.FREE;
     }
 
@@ -102,7 +103,11 @@ export class MoviesService {
         skip,
         take: limit,
         include: {
-          movieCategories: { include: { category: { select: { id: true, name: true, slug: true } } } },
+          movieCategories: {
+            include: {
+              category: { select: { id: true, name: true, slug: true } },
+            },
+          },
           subscriptionPlan: { select: { id: true, name: true, price: true } },
         },
         orderBy: { id: 'desc' },
@@ -134,7 +139,14 @@ export class MoviesService {
       include: {
         movieCategories: { include: { category: true } },
         movieFiles: true,
-        subscriptionPlan: { select: { id: true, name: true, price: true, allowed_qualities: true } },
+        subscriptionPlan: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            allowed_qualities: true,
+          },
+        },
         reviews: {
           select: { rating: true },
         },
@@ -143,14 +155,14 @@ export class MoviesService {
 
     if (!movie) throw new NotFoundException('Kino topilmadi');
 
-    // If movie is PAID, check that user has an active subscription
     const activeSub = await this.getActiveSubscription(profileId);
 
     if (movie.movieType === MovieType.PAID && !activeSub) {
-      throw new ForbiddenException('Bu kinoni ko\'rish uchun obuna kerak. Iltimos, obuna sotib oling.');
+      throw new ForbiddenException(
+        "Bu kinoni ko'rish uchun obuna kerak. Iltimos, obuna sotib oling.",
+      );
     }
 
-    // Increment view count
     await this.prisma.movies.update({
       where: { id: movie.id },
       data: { viewCount: { increment: 1 } },
@@ -158,10 +170,10 @@ export class MoviesService {
 
     const avgRating =
       movie.reviews.length > 0
-        ? movie.reviews.reduce((sum, r) => sum + r.rating, 0) / movie.reviews.length
+        ? movie.reviews.reduce((sum, r) => sum + r.rating, 0) /
+          movie.reviews.length
         : 0;
 
-    // Filter movie files by subscription plan's allowed qualities
     let files = movie.movieFiles;
     if (activeSub && activeSub.subscriptionPlan.allowed_qualities.length > 0) {
       files = files.filter((f) =>
@@ -211,9 +223,10 @@ export class MoviesService {
     if (dto.title) data.slug = this.generateSlug(dto.title);
 
     if (categoryIds) {
-      // Remove old categories and add new
       await this.prisma.movieCategories.deleteMany({ where: { movieId: id } });
-      data.movieCategories = { create: categoryIds.map((categoryId) => ({ categoryId })) };
+      data.movieCategories = {
+        create: categoryIds.map((categoryId) => ({ categoryId })),
+      };
     }
 
     const movie = await this.prisma.movies.update({
@@ -234,17 +247,15 @@ export class MoviesService {
 
   async remove(id: number) {
     await this.findOne(id);
-    // Delete related records first
     await this.prisma.movieCategories.deleteMany({ where: { movieId: id } });
     await this.prisma.movieFile.deleteMany({ where: { movieId: id } });
     await this.prisma.favorite.deleteMany({ where: { movieId: id } });
     await this.prisma.review.deleteMany({ where: { movieId: id } });
     await this.prisma.watchHistory.deleteMany({ where: { movieId: id } });
     await this.prisma.movies.delete({ where: { id } });
-    return { success: true, message: 'Kino muvaffaqiyatli o\'chirildi' };
+    return { success: true, message: "Kino muvaffaqiyatli o'chirildi" };
   }
 
-  // Admin: get all movies with stats
   async adminFindAll() {
     const movies = await this.prisma.movies.findMany({
       include: {
@@ -275,8 +286,10 @@ export class MoviesService {
     };
   }
 
-  // Add movie file
-  async addMovieFile(movieId: number, dto: { quality: string; language?: string; fileUrl: string }) {
+  async addMovieFile(
+    movieId: number,
+    dto: { quality: string; language?: string; fileUrl: string },
+  ) {
     await this.findOne(movieId);
     const file = await this.prisma.movieFile.create({
       data: {
@@ -293,4 +306,3 @@ export class MoviesService {
     };
   }
 }
-

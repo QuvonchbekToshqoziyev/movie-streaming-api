@@ -10,7 +10,10 @@ export class UpdatePaymentDto {
   @IsOptional()
   amount?: number;
 
-  @ApiPropertyOptional({ enum: PaymentStatus, example: PaymentStatus.COMPLETED })
+  @ApiPropertyOptional({
+    enum: PaymentStatus,
+    example: PaymentStatus.COMPLETED,
+  })
   @IsEnum(PaymentStatus)
   @IsOptional()
   status?: PaymentStatus;

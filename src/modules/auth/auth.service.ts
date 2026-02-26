@@ -1,17 +1,21 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { Response } from 'express'
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   async register(dto: CreateUserDto) {
     const existinguser = await this.prisma.user.findFirst({
@@ -80,7 +84,7 @@ export class AuthService {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'true',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return {
@@ -98,8 +102,8 @@ export class AuthService {
   async logout(response: Response) {
     response.clearCookie('access_token');
     return {
-      "success": true,
-      "message": "Muvaffaqiyatli tizimdan chiqildi"
+      success: true,
+      message: 'Muvaffaqiyatli tizimdan chiqildi',
     };
   }
 }

@@ -17,17 +17,26 @@ export class QueryMovieDto {
   @Type(() => Number)
   limit?: number = 20;
 
-  @ApiPropertyOptional({ example: 'action', description: 'Category slug filter' })
+  @ApiPropertyOptional({
+    example: 'action',
+    description: 'Category slug filter',
+  })
   @IsString()
   @IsOptional()
   category?: string;
 
-  @ApiPropertyOptional({ example: 'qasoskorlar', description: 'Search by title' })
+  @ApiPropertyOptional({
+    example: 'qasoskorlar',
+    description: 'Search by title',
+  })
   @IsString()
   @IsOptional()
   search?: string;
 
-  @ApiPropertyOptional({ example: 'free', description: 'Filter by subscription type: free or premium' })
+  @ApiPropertyOptional({
+    example: 'free',
+    description: 'Filter by subscription type: free or premium',
+  })
   @IsString()
   @IsOptional()
   subscription_type?: string;

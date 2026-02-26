@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SubscriptionPlanService } from './subscription-plan.service';
 import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
@@ -10,7 +20,9 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @ApiTags('Subscription Plans')
 @Controller('subscription-plan')
 export class SubscriptionPlanController {
-  constructor(private readonly subscriptionPlanService: SubscriptionPlanService) {}
+  constructor(
+    private readonly subscriptionPlanService: SubscriptionPlanService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -38,7 +50,10 @@ export class SubscriptionPlanController {
   @Roles('SUPERADMIN')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update subscription plan (Superadmin)' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSubscriptionPlanDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateSubscriptionPlanDto,
+  ) {
     return this.subscriptionPlanService.update(id, dto);
   }
 

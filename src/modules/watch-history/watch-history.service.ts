@@ -11,7 +11,13 @@ export class WatchHistoryService {
       where: { profileId },
       include: {
         movie: {
-          select: { id: true, title: true, slug: true, posterUrl: true, duration: true },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            posterUrl: true,
+            duration: true,
+          },
         },
       },
       orderBy: { watchedAt: 'desc' },
@@ -24,7 +30,9 @@ export class WatchHistoryService {
   }
 
   async upsert(profileId: number, dto: CreateWatchHistoryDto) {
-    const movie = await this.prisma.movies.findUnique({ where: { id: dto.movieId } });
+    const movie = await this.prisma.movies.findUnique({
+      where: { id: dto.movieId },
+    });
     if (!movie) throw new NotFoundException('Kino topilmadi');
 
     const entry = await this.prisma.watchHistory.upsert({
@@ -62,6 +70,6 @@ export class WatchHistoryService {
       where: { profileId_movieId: { profileId, movieId } },
     });
 
-    return { success: true, message: 'Tarix o\'chirildi' };
+    return { success: true, message: "Tarix o'chirildi" };
   }
 }
