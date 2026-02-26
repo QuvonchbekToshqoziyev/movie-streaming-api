@@ -17,10 +17,10 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @ApiTags('Reviews')
 @Controller('movies/:movieId/reviews')
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(private readonly reviewsService: ReviewsService) { }
 
   @Get()
-  @ApiOperation({ summary: 'Kinoning barcha sharhlari' })
+  @ApiOperation({ summary: 'Kinoning barcha sharhlari', description: 'Access: PUBLIC' })
   findByMovie(@Param('movieId', ParseIntPipe) movieId: number) {
     return this.reviewsService.findByMovie(movieId);
   }
@@ -28,7 +28,7 @@ export class ReviewsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Sharh qoldirish' })
+  @ApiOperation({ summary: 'Sharh qoldirish', description: 'Access: PROFILE' })
   create(
     @Param('movieId', ParseIntPipe) movieId: number,
     @CurrentUser('sub') profileId: number,
@@ -40,7 +40,7 @@ export class ReviewsController {
   @Delete(':reviewId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: "Sharhni o'chirish" })
+  @ApiOperation({ summary: "Sharhni o'chirish", description: 'Access: PROFILE (Author), ADMIN, SUPERADMIN' })
   remove(
     @Param('movieId', ParseIntPipe) movieId: number,
     @Param('reviewId', ParseIntPipe) reviewId: number,

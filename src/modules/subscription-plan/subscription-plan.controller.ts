@@ -22,25 +22,34 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class SubscriptionPlanController {
   constructor(
     private readonly subscriptionPlanService: SubscriptionPlanService,
-  ) {}
+  ) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Create a new subscription plan (Superadmin)' })
+  @ApiOperation({
+    summary: 'Create a new subscription plan (Superadmin)',
+    description: 'Access: SUPERADMIN',
+  })
   create(@Body() dto: CreateSubscriptionPlanDto) {
     return this.subscriptionPlanService.create(dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all subscription plans' })
+  @ApiOperation({
+    summary: 'Get all subscription plans',
+    description: 'Access: PUBLIC',
+  })
   findAll() {
     return this.subscriptionPlanService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get subscription plan by ID' })
+  @ApiOperation({
+    summary: 'Get subscription plan by ID',
+    description: 'Access: PUBLIC',
+  })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.subscriptionPlanService.findOne(id);
   }
@@ -49,7 +58,10 @@ export class SubscriptionPlanController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update subscription plan (Superadmin)' })
+  @ApiOperation({
+    summary: 'Update subscription plan (Superadmin)',
+    description: 'Access: SUPERADMIN',
+  })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateSubscriptionPlanDto,
@@ -61,7 +73,10 @@ export class SubscriptionPlanController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Delete subscription plan (Superadmin)' })
+  @ApiOperation({
+    summary: 'Delete subscription plan (Superadmin)',
+    description: 'Access: SUPERADMIN',
+  })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.subscriptionPlanService.remove(id);
   }

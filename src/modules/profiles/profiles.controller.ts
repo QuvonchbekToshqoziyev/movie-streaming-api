@@ -21,12 +21,12 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @ApiTags('Profiles')
 @Controller('profiles')
 export class ProfilesController {
-  constructor(private readonly profilesService: ProfilesService) {}
+  constructor(private readonly profilesService: ProfilesService) { }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiOperation({ summary: 'Get current user profile', description: 'Access: PROFILE' })
   getMyProfile(@CurrentUser('sub') profileId: number) {
     return this.profilesService.findOne(profileId);
   }
@@ -34,7 +34,7 @@ export class ProfilesController {
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiOperation({ summary: 'Update current user profile', description: 'Access: PROFILE' })
   updateMyProfile(
     @CurrentUser('sub') profileId: number,
     @Body() dto: UpdateProfileDto,
@@ -46,7 +46,10 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Create a new profile (Admin)' })
+  @ApiOperation({
+    summary: 'Create a new profile (Admin)',
+    description: 'Access: ADMIN, SUPERADMIN',
+  })
   create(@Body() dto: CreateProfileDto) {
     return this.profilesService.create(dto);
   }
@@ -55,7 +58,10 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get all profiles (Admin)' })
+  @ApiOperation({
+    summary: 'Get all profiles (Admin)',
+    description: 'Access: ADMIN, SUPERADMIN',
+  })
   findAll() {
     return this.profilesService.findAll();
   }
@@ -64,7 +70,10 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get profile by ID (Admin)' })
+  @ApiOperation({
+    summary: 'Get profile by ID (Admin)',
+    description: 'Access: ADMIN, SUPERADMIN',
+  })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.profilesService.findOne(id);
   }
@@ -73,7 +82,10 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update profile by ID (Admin)' })
+  @ApiOperation({
+    summary: 'Update profile by ID (Admin)',
+    description: 'Access: ADMIN, SUPERADMIN',
+  })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProfileDto) {
     return this.profilesService.update(id, dto);
   }
@@ -82,7 +94,10 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Delete profile by ID (Admin)' })
+  @ApiOperation({
+    summary: 'Delete profile by ID (Admin)',
+    description: 'Access: ADMIN, SUPERADMIN',
+  })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.profilesService.remove(id);
   }

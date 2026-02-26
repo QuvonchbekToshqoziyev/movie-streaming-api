@@ -28,22 +28,31 @@ class AddFavoriteDto {
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class FavoritesController {
-  constructor(private readonly favoritesService: FavoritesService) {}
+  constructor(private readonly favoritesService: FavoritesService) { }
 
   @Get()
-  @ApiOperation({ summary: "Sevimli kinolar ro'yxati" })
+  @ApiOperation({
+    summary: "Sevimli kinolar ro'yxati",
+    description: 'Access: PROFILE',
+  })
   findAll(@CurrentUser('sub') profileId: number) {
     return this.favoritesService.findAll(profileId);
   }
 
   @Post()
-  @ApiOperation({ summary: "Kinoni sevimlilarga qo'shish" })
+  @ApiOperation({
+    summary: "Kinoni sevimlilarga qo'shish",
+    description: 'Access: PROFILE',
+  })
   add(@CurrentUser('sub') profileId: number, @Body() dto: AddFavoriteDto) {
     return this.favoritesService.add(profileId, dto.movie_id);
   }
 
   @Delete(':movieId')
-  @ApiOperation({ summary: "Kinoni sevimlilardan o'chirish" })
+  @ApiOperation({
+    summary: "Kinoni sevimlilardan o'chirish",
+    description: 'Access: PROFILE',
+  })
   remove(
     @CurrentUser('sub') profileId: number,
     @Param('movieId', ParseIntPipe) movieId: number,

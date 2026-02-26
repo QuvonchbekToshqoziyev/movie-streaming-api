@@ -20,25 +20,31 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @ApiTags('Categories')
 @Controller('categories')
 export class CategoriesController {
-  constructor(private readonly categoriesService: CategoriesService) {}
+  constructor(private readonly categoriesService: CategoriesService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Yangi kategoriya yaratish (Admin)' })
+  @ApiOperation({
+    summary: 'Yangi kategoriya yaratish (Admin)',
+    description: 'Access: ADMIN, SUPERADMIN',
+  })
   create(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Barcha kategoriyalar' })
+  @ApiOperation({ summary: 'Barcha kategoriyalar', description: 'Access: PUBLIC' })
   findAll() {
     return this.categoriesService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: "Kategoriyani ID bo'yicha olish" })
+  @ApiOperation({
+    summary: "Kategoriyani ID bo'yicha olish",
+    description: 'Access: PUBLIC',
+  })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.categoriesService.findOne(id);
   }
@@ -47,7 +53,10 @@ export class CategoriesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Kategoriyani yangilash (Admin)' })
+  @ApiOperation({
+    summary: 'Kategoriyani yangilash (Admin)',
+    description: 'Access: ADMIN, SUPERADMIN',
+  })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCategoryDto,
@@ -59,7 +68,10 @@ export class CategoriesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: "Kategoriyani o'chirish (Admin)" })
+  @ApiOperation({
+    summary: "Kategoriyani o'chirish (Admin)",
+    description: 'Access: ADMIN, SUPERADMIN',
+  })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.categoriesService.remove(id);
   }

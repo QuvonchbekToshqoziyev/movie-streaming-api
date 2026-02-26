@@ -19,16 +19,19 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class WatchHistoryController {
-  constructor(private readonly watchHistoryService: WatchHistoryService) {}
+  constructor(private readonly watchHistoryService: WatchHistoryService) { }
 
   @Get()
-  @ApiOperation({ summary: "Ko'rish tarixi" })
+  @ApiOperation({ summary: "Ko'rish tarixi", description: 'Access: PROFILE' })
   findAll(@CurrentUser('sub') profileId: number) {
     return this.watchHistoryService.findAll(profileId);
   }
 
   @Post()
-  @ApiOperation({ summary: "Ko'rish tarixini yozish" })
+  @ApiOperation({
+    summary: "Ko'rish tarixini yozish",
+    description: 'Access: PROFILE',
+  })
   upsert(
     @CurrentUser('sub') profileId: number,
     @Body() dto: CreateWatchHistoryDto,
@@ -37,7 +40,10 @@ export class WatchHistoryController {
   }
 
   @Delete(':movieId')
-  @ApiOperation({ summary: "Ko'rish tarixini o'chirish" })
+  @ApiOperation({
+    summary: "Ko'rish tarixini o'chirish",
+    description: 'Access: PROFILE',
+  })
   remove(
     @CurrentUser('sub') profileId: number,
     @Param('movieId', ParseIntPipe) movieId: number,

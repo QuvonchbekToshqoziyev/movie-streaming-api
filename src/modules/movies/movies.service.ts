@@ -3,6 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import * as path from 'path';
+import * as fs from 'fs';
+import { VideoProcessorService } from './video-processor.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
@@ -11,7 +14,10 @@ import { MovieType, SubscriptionStatus } from '@prisma/client';
 
 @Injectable()
 export class MoviesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly videoProcessor: VideoProcessorService,
+  ) { }
 
   private generateSlug(title: string): string {
     return title
@@ -171,7 +177,7 @@ export class MoviesService {
     const avgRating =
       movie.reviews.length > 0
         ? movie.reviews.reduce((sum, r) => sum + r.rating, 0) /
-          movie.reviews.length
+        movie.reviews.length
         : 0;
 
     let files = movie.movieFiles;
@@ -303,6 +309,53 @@ export class MoviesService {
       success: true,
       message: 'Kino fayli muvaffaqiyatli yuklandi',
       data: file,
+    };
+  }
+
+  async processMovieUpload(movieId: number, file: Express.Multer.File) {
+    const movie = await this.findOne(movieId);
+    const movieDir = path.join(process.cwd(), 'uploads', 'movies', movie.slug);
+
+    if (!fs.existsSync(movieDir)) {
+      fs.mkdirSync(movieDir, { recursive: true });
+    }
+
+    const originalFileName = `original${path.extname(file.originalname)}`;
+    const originalPath = path.join(movieDir, originalFileName);
+
+    // Save original file
+    fs.writeFileSync(originalPath, file.buffer);
+
+    // Process versions in background
+    this.videoProcessor.processVideo(originalPath, movieDir, movie.slug)
+      .then(async (generatedFiles) => {
+        for (const gen of generatedFiles) {
+          await this.prisma.movieFile.create({
+            data: {
+              movieId: movie.id,
+              quality: gen.quality as any,
+              fileUrl: gen.fileUrl,
+              language: 'uzbek',
+            },
+          });
+        }
+        // Also add the original one
+        await this.prisma.movieFile.create({
+          data: {
+            movieId: movie.id,
+            quality: 'P1080', // Assuming original is high quality, or we could probe it
+            fileUrl: `/uploads/movies/${movie.slug}/${originalFileName}`,
+            language: 'uzbek',
+          },
+        });
+      })
+      .catch((err) => {
+        console.error(`Error processing video for ${movie.slug}:`, err);
+      });
+
+    return {
+      success: true,
+      message: "Video yuklandi va qayta ishlanmoqda. Sifatlar tez orada paydo bo'ladi.",
     };
   }
 }

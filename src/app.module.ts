@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AdminsModule } from './modules/admins/admins.module';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { SubscriptionPlanModule } from './modules/subscription-plan/subscription-plan.module';
@@ -14,6 +16,10 @@ import { WatchHistoryModule } from './modules/watch-history/watch-history.module
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     PrismaModule,
     AuthModule,
     AdminsModule,
@@ -30,4 +36,4 @@ import { WatchHistoryModule } from './modules/watch-history/watch-history.module
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

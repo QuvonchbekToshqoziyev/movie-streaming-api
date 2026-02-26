@@ -22,34 +22,49 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 export class ProfileSubscriptionsController {
   constructor(
     private readonly profileSubscriptionsService: ProfileSubscriptionsService,
-  ) {}
+  ) { }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new profile subscription' })
+  @ApiOperation({
+    summary: 'Create a new profile subscription',
+    description: 'Access: PROFILE',
+  })
   create(@Body() dto: CreateProfileSubscriptionDto) {
     return this.profileSubscriptionsService.create(dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all profile subscriptions' })
+  @ApiOperation({
+    summary: 'Get all profile subscriptions',
+    description: 'Access: PROFILE',
+  })
   findAll() {
     return this.profileSubscriptionsService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get profile subscription by ID' })
+  @ApiOperation({
+    summary: 'Get profile subscription by ID',
+    description: 'Access: PROFILE',
+  })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.profileSubscriptionsService.findOne(id);
   }
 
   @Get('profile/:profileId')
-  @ApiOperation({ summary: 'Get subscriptions by profile ID' })
+  @ApiOperation({
+    summary: 'Get subscriptions by profile ID',
+    description: 'Access: PROFILE',
+  })
   findByProfile(@Param('profileId', ParseIntPipe) profileId: number) {
     return this.profileSubscriptionsService.findByProfile(profileId);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update profile subscription by ID' })
+  @ApiOperation({
+    summary: 'Update profile subscription by ID',
+    description: 'Access: PROFILE',
+  })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateProfileSubscriptionDto,
@@ -58,7 +73,10 @@ export class ProfileSubscriptionsController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete profile subscription by ID' })
+  @ApiOperation({
+    summary: 'Delete profile subscription by ID',
+    description: 'Access: PROFILE',
+  })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.profileSubscriptionsService.remove(id);
   }

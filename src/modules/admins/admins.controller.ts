@@ -23,34 +23,34 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @Roles('SUPERADMIN')
 @ApiBearerAuth('access-token')
 export class AdminsController {
-  constructor(private readonly adminsService: AdminsService) {}
+  constructor(private readonly adminsService: AdminsService) { }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new admin' })
+  @ApiOperation({ summary: 'Create a new admin', description: 'Access: SUPERADMIN' })
   create(@Body() dto: CreateAdminDto) {
     return this.adminsService.create(dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all admins' })
+  @ApiOperation({ summary: 'Get all admins', description: 'Access: SUPERADMIN' })
   findAll() {
     return this.adminsService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get admin by ID' })
+  @ApiOperation({ summary: 'Get admin by ID', description: 'Access: SUPERADMIN' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.adminsService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update admin by ID' })
+  @ApiOperation({ summary: 'Update admin by ID', description: 'Access: SUPERADMIN' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateAdminDto) {
     return this.adminsService.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete admin by ID' })
+  @ApiOperation({ summary: 'Delete admin by ID', description: 'Access: SUPERADMIN' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.adminsService.remove(id);
   }
