@@ -1,4 +1,7 @@
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,11 +12,18 @@ import {
   Post,
   Query,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { MoviesService } from './movies.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
@@ -24,30 +34,27 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateMovieFileDto } from './dto/create-movie-file.dto';
 import { OptionalJwtGuard } from '../../common/guards/optional-jwt.guard';
+import { MovieType } from '@prisma/client';
+
+
 
 @ApiTags('Movies')
 @Controller('movies')
 @UseGuards(OptionalJwtGuard)
 export class MoviesController {
-  constructor(private readonly moviesService: MoviesService) { }
-
+  constructor(private readonly moviesService: MoviesService) {}
+  
   @Get()
-  @ApiOperation({
-    summary: 'Barcha kinolar (pagination, search, filter)',
-    description: 'Access: PUBLIC',
-  })
+  @ApiOperation({ summary: 'Barcha kinolar (pagination, search, filter)', description: 'Access: PUBLIC' })
   findAll(
     @Query() query: QueryMovieDto,
     @CurrentUser('sub') profileId: number | null,
   ) {
     return this.moviesService.findAll(query, profileId);
   }
-
+  
   @Get(':slug')
-  @ApiOperation({
-    summary: "Kinoni slug bo'yicha olish",
-    description: 'Access: PUBLIC',
-  })
+  @ApiOperation({ summary: "Kinoni slug bo'yicha olish", description: 'Access: PUBLIC' })
   findBySlug(
     @Param('slug') slug: string,
     @CurrentUser('sub') profileId: number | null,
@@ -62,75 +69,120 @@ export class MoviesController {
 @Roles('ADMIN', 'SUPERADMIN')
 @ApiBearerAuth('access-token')
 export class AdminMoviesController {
-  constructor(private readonly moviesService: MoviesService) { }
-
+  constructor(private readonly moviesService: MoviesService) {}
+  
   @Get()
-  @ApiOperation({
-    summary: "Admin: barcha kinolar ro'yxati",
-    description: 'Access: ADMIN, SUPERADMIN',
-  })
+  @ApiOperation({ summary: "Admin: barcha kinolar ro'yxati", description: 'Access: ADMIN, SUPERADMIN' })
   findAll() {
     return this.moviesService.adminFindAll();
   }
-
+  
   @Get(':id')
-  @ApiOperation({
-    summary: "Admin: kinoni ID bo'yicha olish",
-    description: 'Access: ADMIN, SUPERADMIN',
-  })
+  @ApiOperation({ summary: "Admin: kinoni ID bo'yicha olish", description: 'Access: ADMIN, SUPERADMIN' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.moviesService.findOne(id);
   }
-
+  
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'poster', maxCount: 1 },
+        { name: 'video', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: (req, file, cb) => {
+            if (file.fieldname === 'poster') cb(null, 'uploads/posters');
+            else cb(null, 'uploads/videos');
+          },
+          filename: (req, file, cb) => {
+            const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+            cb(null, `${unique}${extname(file.originalname)}`);
+          },
+        }),
+      },
+    ),
+  )
   @Post()
-  @ApiOperation({
-    summary: "Admin: yangi kino qo'shish",
-    description: 'Access: ADMIN, SUPERADMIN',
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'poster', maxCount: 1 },
+      { name: 'video', maxCount: 1 },
+    ]),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['poster', 'video', 'title', 'description', 'releaseDate', 'country', 'genre'],
+      properties: {
+        poster: { type: 'string', format: 'binary' },
+        video: { type: 'string', format: 'binary' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        releaseDate: { type: 'string', example: '2024-01-15' },
+        country: { type: 'string' },
+        genre: { type: 'string' },
+        rating: { type: 'number', example: 8.5 },
+        movieType: { type: 'string', enum: Object.values(MovieType) },
+        subscriptionPlanId: { type: 'integer', example: 1 },
+        categoryIds: {
+          oneOf: [
+            { type: 'array', items: { type: 'integer' }, example: [1, 2] },
+            { type: 'string', example: '[1,2]' },
+            { type: 'string', example: '1,2' },
+          ],
+        },
+      },
+    },
   })
-  create(@Body() dto: CreateMovieDto, @CurrentUser('sub') userId: number) {
-    return this.moviesService.create(dto, userId);
+  @ApiOperation({ summary: "Yangi kino qo'shish (poster + video)", description: 'Access: ADMIN' })
+  create(
+    @Body() dto: CreateMovieDto,
+    @CurrentUser('sub') userId: number,
+    @UploadedFiles() files: { poster?: Express.Multer.File[]; video?: Express.Multer.File[] },
+  ) {
+    const poster = files?.poster?.[0];
+    const video = files?.video?.[0];
+
+    if (!poster) throw new BadRequestException('Poster fayli yuklanmagan');
+    if (!video) throw new BadRequestException('Video fayli yuklanmagan');
+
+    if (!poster.mimetype.match(/^image\/(jpeg|png|webp)$/)) {
+      throw new BadRequestException("Poster faqat jpeg, png yoki webp formatda bo'lishi kerak");
+    }
+
+    if (!video.mimetype.match(/^video\/(mp4|x-matroska|webm|quicktime)$/)) {
+      throw new BadRequestException("Video faqat mp4, mkv, webm yoki mov formatda bo'lishi kerak");
+    }
+
+    return this.moviesService.create(dto, userId, poster, video);
   }
 
   @Patch(':id')
-  @ApiOperation({
-    summary: 'Admin: kinoni yangilash',
-    description: 'Access: ADMIN, SUPERADMIN',
-  })
+  @ApiOperation({ summary: 'Admin: kinoni yangilash', description: 'Access: ADMIN, SUPERADMIN' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMovieDto) {
     return this.moviesService.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({
-    summary: "Admin: kinoni o'chirish",
-    description: 'Access: ADMIN, SUPERADMIN',
-  })
+  @ApiOperation({ summary: "Admin: kinoni o'chirish", description: 'Access: ADMIN, SUPERADMIN' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.moviesService.remove(id);
   }
 
   @Post(':id/files')
-  @ApiOperation({
-    summary: "Admin: kino fayli qo'shish",
-    description: 'Access: ADMIN, SUPERADMIN',
-  })
-  addFile(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: CreateMovieFileDto,
-  ) {
+  @ApiOperation({ summary: "Admin: kino fayli qo'shish", description: 'Access: ADMIN, SUPERADMIN' })
+  addFile(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateMovieFileDto) {
     return this.moviesService.addMovieFile(id, dto);
   }
 
   @Post(':id/upload')
-  @ApiOperation({
-    summary: 'Admin: kino videosini yuklash va sifatlarga boʻlish',
-    description: 'Access: ADMIN, SUPERADMIN',
-  })
+  @ApiOperation({ summary: 'Admin: kino videosini yuklash va sifatlarga bo‘lish', description: 'Access: ADMIN, SUPERADMIN' })
   @UseInterceptors(FileInterceptor('file'))
-  uploadVideo(
-    @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
+  uploadVideo(@Param('id', ParseIntPipe) id: number, @UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Fayl yuklanmagan');
     return this.moviesService.processMovieUpload(id, file);
   }
 }
+

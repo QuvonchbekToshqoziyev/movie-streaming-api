@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -10,69 +11,110 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
 import { QueryMovieDto } from './dto/query-movie.dto';
-import { MovieType, SubscriptionStatus } from '@prisma/client';
+import { MovieQuality, MovieType, SubscriptionStatus } from '@prisma/client';
 
 @Injectable()
 export class MoviesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly videoProcessor: VideoProcessorService,
-  ) { }
+  ) {
+    fs.mkdirSync(this.POSTER_DIR, { recursive: true });
+    fs.mkdirSync(this.VIDEO_DIR, { recursive: true });
+  }
+
+  private readonly UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
+  private readonly POSTER_DIR = path.join(this.UPLOAD_ROOT, 'posters');
+  private readonly VIDEO_DIR = path.join(this.UPLOAD_ROOT, 'videos');
 
   private generateSlug(title: string): string {
     return title
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
-      .trim();
+      .replace(/^-+|-+$/g, '');
   }
 
   private async getActiveSubscription(profileId: number | null) {
     if (!profileId) return null;
 
-    const sub = await this.prisma.profileSubscription.findFirst({
+    return this.prisma.profileSubscription.findFirst({
       where: {
         profileId,
         status: SubscriptionStatus.ACTIVE,
         endDate: { gte: new Date() },
       },
-      include: {
-        subscriptionPlan: true,
-      },
+      include: { subscriptionPlan: true },
       orderBy: { endDate: 'desc' },
     });
-
-    return sub;
   }
 
-  async create(dto: CreateMovieDto, createdBy: number) {
+  async create(
+    dto: CreateMovieDto,
+    createdBy: number,
+    posterFile: Express.Multer.File,
+    videoFile: Express.Multer.File,
+  ) {
+    const movieType = dto.movieType ?? MovieType.FREE;
+
+    if (movieType === MovieType.PAID && !dto.subscriptionPlanId) {
+      throw new BadRequestException('PAID kino uchun subscriptionPlanId majburiy');
+    }
+
+    if (!videoFile?.path || !fs.existsSync(videoFile.path)) {
+      throw new BadRequestException('Video fayl diskda topilmadi (multer diskStorage kerak)');
+    }
+
     const { categoryIds, ...movieData } = dto;
-    const slug = this.generateSlug(dto.title);
+
+    const baseSlug = this.generateSlug(dto.title);
+    const exists = await this.prisma.movies.findFirst({
+      where: { slug: baseSlug },
+      select: { id: true },
+    });
+    const slug = exists ? `${baseSlug}-${Date.now()}` : baseSlug;
+
+    const posterUrl = `/uploads/posters/${posterFile.filename}`;
+
+    const meta = await this.videoProcessor.getVideoMetadata(videoFile.path);
+    const duration = meta.duration;
+
+    const movieCreateData: any = {
+      ...movieData,
+      slug,
+      releaseDate: new Date(dto.releaseDate),
+      posterUrl,
+      duration,
+      rating: dto.rating ?? 0,
+      movieType,
+      createdBy,
+      subscriptionPlanId: dto.subscriptionPlanId ?? null,
+      movieCategories: categoryIds?.length
+        ? { create: categoryIds.map((categoryId) => ({ categoryId })) }
+        : undefined,
+    };
 
     const movie = await this.prisma.movies.create({
-      data: {
-        ...movieData,
-        slug,
-        releaseDate: new Date(dto.releaseDate),
-        posterUrl: dto.posterUrl || '',
-        rating: dto.rating || 0,
-        movieType: dto.movieType || MovieType.FREE,
-        createdBy,
-        movieCategories: categoryIds?.length
-          ? { create: categoryIds.map((categoryId) => ({ categoryId })) }
-          : undefined,
-      },
+      data: movieCreateData,
       include: {
         movieCategories: { include: { category: true } },
         subscriptionPlan: { select: { id: true, name: true } },
       },
     });
 
+    this.processMovieUpload(movie.id, videoFile).catch((err) =>
+      console.error(`[create] Video processing failed for movieId=${movie.id}, slug=${slug}:`, err),
+    );
+
     return {
       success: true,
-      message: "Yangi kino muvaffaqiyatli qo'shildi",
-      data: movie,
+      message: "Yangi kino muvaffaqiyatli qo'shildi. Video qayta ishlanmoqda.",
+      data: {
+        ...movie,
+        poster_url: `/movies/${movie.id}/poster`,
+      },
     };
   }
 
@@ -84,21 +126,16 @@ export class MoviesService {
 
     const where: any = {};
 
-    if (search) {
-      where.title = { contains: search, mode: 'insensitive' };
-    }
+    if (search) where.title = { contains: search, mode: 'insensitive' };
 
     if (category) {
-      where.movieCategories = {
-        some: { category: { slug: category } },
-      };
+      where.movieCategories = { some: { category: { slug: category } } };
     }
 
     if (subscription_type) {
-      where.movieType =
-        subscription_type.toUpperCase() === 'PAID'
-          ? MovieType.PAID
-          : MovieType.FREE;
+      const wantsPaid = subscription_type.toUpperCase() === 'PAID';
+      if (wantsPaid && !activeSub) where.movieType = MovieType.FREE;
+      else where.movieType = wantsPaid ? MovieType.PAID : MovieType.FREE;
     } else if (!activeSub) {
       where.movieType = MovieType.FREE;
     }
@@ -110,9 +147,7 @@ export class MoviesService {
         take: limit,
         include: {
           movieCategories: {
-            include: {
-              category: { select: { id: true, name: true, slug: true } },
-            },
+            include: { category: { select: { id: true, name: true, slug: true } } },
           },
           subscriptionPlan: { select: { id: true, name: true, price: true } },
         },
@@ -129,12 +164,7 @@ export class MoviesService {
           categories: m.movieCategories.map((mc) => mc.category.name),
           subscription_type: m.movieType,
         })),
-        pagination: {
-          total,
-          page,
-          limit,
-          pages: Math.ceil(total / limit),
-        },
+        pagination: { total, page, limit, pages: Math.ceil(total / limit) },
       },
     };
   }
@@ -146,16 +176,9 @@ export class MoviesService {
         movieCategories: { include: { category: true } },
         movieFiles: true,
         subscriptionPlan: {
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            allowed_qualities: true,
-          },
+          select: { id: true, name: true, price: true, allowed_qualities: true },
         },
-        reviews: {
-          select: { rating: true },
-        },
+        reviews: { select: { rating: true } },
       },
     });
 
@@ -164,9 +187,7 @@ export class MoviesService {
     const activeSub = await this.getActiveSubscription(profileId);
 
     if (movie.movieType === MovieType.PAID && !activeSub) {
-      throw new ForbiddenException(
-        "Bu kinoni ko'rish uchun obuna kerak. Iltimos, obuna sotib oling.",
-      );
+      throw new ForbiddenException("Bu kinoni ko'rish uchun obuna kerak. Iltimos, obuna sotib oling.");
     }
 
     await this.prisma.movies.update({
@@ -176,8 +197,7 @@ export class MoviesService {
 
     const avgRating =
       movie.reviews.length > 0
-        ? movie.reviews.reduce((sum, r) => sum + r.rating, 0) /
-        movie.reviews.length
+        ? movie.reviews.reduce((sum, r) => sum + r.rating, 0) / movie.reviews.length
         : 0;
 
     let files = movie.movieFiles;
@@ -230,9 +250,7 @@ export class MoviesService {
 
     if (categoryIds) {
       await this.prisma.movieCategories.deleteMany({ where: { movieId: id } });
-      data.movieCategories = {
-        create: categoryIds.map((categoryId) => ({ categoryId })),
-      };
+      data.movieCategories = { create: categoryIds.map((categoryId) => ({ categoryId })) };
     }
 
     const movie = await this.prisma.movies.update({
@@ -244,11 +262,7 @@ export class MoviesService {
       },
     });
 
-    return {
-      success: true,
-      message: 'Kino muvaffaqiyatli yangilandi',
-      data: movie,
-    };
+    return { success: true, message: 'Kino muvaffaqiyatli yangilandi', data: movie };
   }
 
   async remove(id: number) {
@@ -294,63 +308,67 @@ export class MoviesService {
 
   async addMovieFile(
     movieId: number,
-    dto: { quality: string; language?: string; fileUrl: string },
+    dto: { quality: MovieQuality; language?: string; fileUrl: string },
   ) {
     await this.findOne(movieId);
+
     const file = await this.prisma.movieFile.create({
       data: {
         movieId,
-        quality: dto.quality as any,
-        language: dto.language,
+        quality: dto.quality,
+        language: dto.language ?? 'uzbek',
         fileUrl: dto.fileUrl,
       },
     });
-    return {
-      success: true,
-      message: 'Kino fayli muvaffaqiyatli yuklandi',
-      data: file,
-    };
+
+    return { success: true, message: 'Kino fayli muvaffaqiyatli yuklandi', data: file };
   }
 
   async processMovieUpload(movieId: number, file: Express.Multer.File) {
     const movie = await this.findOne(movieId);
-    const movieDir = path.join(process.cwd(), 'uploads', 'movies', movie.slug);
+    const movieDir = path.join(this.UPLOAD_ROOT, 'movies', movie.slug);
+    fs.mkdirSync(movieDir, { recursive: true });
 
-    if (!fs.existsSync(movieDir)) {
-      fs.mkdirSync(movieDir, { recursive: true });
+    if (!file?.path || !fs.existsSync(file.path)) {
+      throw new BadRequestException('Video fayl diskda topilmadi (multer diskStorage kerak)');
     }
 
-    const originalFileName = `original${path.extname(file.originalname)}`;
+    const originalFileName = `original-${Date.now()}${path.extname(file.originalname)}`;
     const originalPath = path.join(movieDir, originalFileName);
 
-    // Save original file
-    fs.writeFileSync(originalPath, file.buffer);
+    fs.renameSync(file.path, originalPath);
 
-    // Process versions in background
-    this.videoProcessor.processVideo(originalPath, movieDir, movie.slug)
+    this.videoProcessor
+      .processVideo(originalPath, movieDir, movie.slug)
       .then(async (generatedFiles) => {
         for (const gen of generatedFiles) {
-          await this.prisma.movieFile.create({
-            data: {
-              movieId: movie.id,
-              quality: gen.quality as any,
-              fileUrl: gen.fileUrl,
-              language: 'uzbek',
-            },
+          const existing = await this.prisma.movieFile.findFirst({
+            where: { movieId: movie.id, quality: gen.quality },
           });
+
+          if (existing) {
+            await this.prisma.movieFile.update({
+              where: { id: existing.id },
+              data: { fileUrl: gen.fileUrl },
+            });
+          } else {
+            await this.prisma.movieFile.create({
+              data: {
+                movieId: movie.id,
+                quality: gen.quality,
+                fileUrl: gen.fileUrl,
+                language: 'uzbek',
+              },
+            });
+          }
         }
-        // Also add the original one
-        await this.prisma.movieFile.create({
-          data: {
-            movieId: movie.id,
-            quality: 'P1080', // Assuming original is high quality, or we could probe it
-            fileUrl: `/uploads/movies/${movie.slug}/${originalFileName}`,
-            language: 'uzbek',
-          },
-        });
+
+        // cleanup original
+        if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
       })
       .catch((err) => {
-        console.error(`Error processing video for ${movie.slug}:`, err);
+        console.error(`[VideoProcessor] Error processing ${movie.slug}:`, err);
+        if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
       });
 
     return {

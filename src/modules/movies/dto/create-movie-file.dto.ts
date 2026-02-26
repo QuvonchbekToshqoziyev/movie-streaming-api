@@ -1,21 +1,23 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { MovieQuality } from '@prisma/client';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateMovieFileDto {
   @ApiProperty({
-    example: 'P720',
-    description: 'Quality: P240, P360, P480, P720, P1080, P4K',
+    enum: MovieQuality,
+    example: MovieQuality.P720,
+    description: 'Quality enum from Prisma (P240, P360, P480, P720, P1080, P4K)',
   })
-  @IsString()
+  @IsEnum(MovieQuality)
   @IsNotEmpty()
-  quality!: string;
+  quality!: MovieQuality;
 
   @ApiPropertyOptional({ example: 'uzbek', default: 'uzbek' })
   @IsString()
   @IsOptional()
   language?: string = 'uzbek';
 
-  @ApiProperty({ example: 'https://example.com/movies/film-720p.mp4' })
+  @ApiProperty({ example: 'https://example.com/movies/film-p720.mp4' })
   @IsString()
   @IsNotEmpty()
   fileUrl!: string;

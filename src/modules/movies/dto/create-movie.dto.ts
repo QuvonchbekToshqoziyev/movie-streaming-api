@@ -1,74 +1,83 @@
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { MovieType } from '@prisma/client';
 import {
   IsArray,
   IsEnum,
   IsInt,
-  IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { MovieType } from '@prisma/client';
 
 export class CreateMovieDto {
-  @ApiProperty({ example: 'Qasoskorlar: Abadiyat Jangi' })
+  @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   title!: string;
 
-  @ApiProperty({ example: "Film haqida batafsil ma'lumot" })
+  @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   description!: string;
 
-  @ApiProperty({ example: '2018-04-27T00:00:00.000Z' })
+  @ApiProperty({ example: '2024-01-15' })
   @IsString()
-  @IsNotEmpty()
   releaseDate!: string;
 
-  @ApiProperty({ example: 149 })
-  @IsInt()
-  @Type(() => Number)
-  duration!: number;
-
-  @ApiProperty({ example: 'USA' })
+  @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   country!: string;
 
-  @ApiPropertyOptional({ example: 'https://example.com/poster.jpg' })
+  @ApiProperty()
   @IsString()
-  @IsOptional()
-  posterUrl?: string;
-
-  @ApiProperty({ example: 'Action' })
-  @IsString()
-  @IsNotEmpty()
   genre!: string;
+
+  @ApiPropertyOptional({ enum: MovieType, default: MovieType.FREE })
+  @IsOptional()
+  @IsEnum(MovieType)
+  movieType?: MovieType;
+
+  @ApiPropertyOptional({ example: 1, description: 'Required if movieType=PAID' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  subscriptionPlanId?: number;
 
   @ApiPropertyOptional({ example: 8.5 })
   @IsOptional()
   @Type(() => Number)
+  @IsNumber()
   rating?: number;
 
-  @ApiProperty({ example: 1, description: 'Subscription plan ID' })
-  @IsInt()
-  @Type(() => Number)
-  subscriptionPlanId!: number;
-
   @ApiPropertyOptional({
-    enum: MovieType,
-    example: MovieType.FREE,
-    default: MovieType.FREE,
+    example: [1, 2],
+    description:
+      'Category IDs. Supports: [1,2], "1,2", "[1,2]", or repeated form fields.',
   })
-  @IsEnum(MovieType)
   @IsOptional()
-  movieType?: MovieType;
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
 
-  @ApiPropertyOptional({ example: [1, 2], description: 'Category IDs' })
+    if (Array.isArray(value)) return value.map((v) => Number(v));
+
+    if (typeof value === 'string') {
+      // try JSON first: "[1,2]"
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed.map((v) => Number(v));
+      } catch {
+        // fallback: "1,2"
+      }
+
+      return value
+        .replace(/[\[\]\s]/g, '')
+        .split(',')
+        .filter(Boolean)
+        .map((v) => Number(v));
+    }
+
+    return [Number(value)];
+  })
   @IsArray()
-  @IsOptional()
   @IsInt({ each: true })
-  @Type(() => Number)
   categoryIds?: number[];
 }

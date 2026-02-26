@@ -15,6 +15,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { WatchHistoryModule } from './modules/watch-history/watch-history.module';
 import { PlaylistsModule } from './modules/playlists/playlists.module';
 import { PlaylistItemModule } from './modules/playlistItems/playlist.item.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -35,7 +36,8 @@ import { PlaylistItemModule } from './modules/playlistItems/playlist.item.module
     ReviewsModule,
     WatchHistoryModule,
     PlaylistsModule,
-    PlaylistItemModule
+    PlaylistItemModule,
+    UploadModule
   ],
   controllers: [],
   providers: [],
