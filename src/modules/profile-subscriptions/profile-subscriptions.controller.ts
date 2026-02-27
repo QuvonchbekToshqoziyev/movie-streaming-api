@@ -14,10 +14,13 @@ import { ProfileSubscriptionsService } from './profile-subscriptions.service';
 import { CreateProfileSubscriptionDto } from './dto/create-profile-subscription.dto';
 import { UpdateProfileSubscriptionDto } from './dto/update-profile-subscription.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('Profile Subscriptions')
 @Controller('profile-subscriptions')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN', 'SUPERADMIN')
 @ApiBearerAuth('access-token')
 export class ProfileSubscriptionsController {
   constructor(

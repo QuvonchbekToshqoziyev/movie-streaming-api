@@ -18,10 +18,10 @@ export class FavoritesService {
             id: true,
             title: true,
             slug: true,
-            posterUrl: true,
+            posterUrl: true, 
             releaseDate: true,
             rating: true,
-            subscriptionPlan: { select: { name: true, price: true } },
+            movieType: true,
           },
         },
       },
@@ -31,9 +31,13 @@ export class FavoritesService {
       success: true,
       data: {
         movies: favorites.map((f) => ({
-          ...f.movie,
-          subscription_type:
-            Number(f.movie.subscriptionPlan.price) === 0 ? 'free' : 'premium',
+          id: f.movie.id,
+          title: f.movie.title,
+          slug: f.movie.slug,
+          poster_url: f.movie.posterUrl,
+          release_year: f.movie.releaseDate.getFullYear(),
+          rating: f.movie.rating,
+          subscription_type: f.movie.movieType === 'FREE' ? 'free' : 'premium',
         })),
         total: favorites.length,
       },
@@ -63,6 +67,7 @@ export class FavoritesService {
         id: favorite.id,
         movie_id: favorite.movieId,
         movie_title: favorite.movie.title,
+        created_at: favorite.createdAt,
       },
     };
   }

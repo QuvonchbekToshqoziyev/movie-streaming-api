@@ -8,8 +8,8 @@ import {
   Get,
   Param,
   ParseIntPipe,
-  Patch,
   Post,
+  Put,
   Query,
   UploadedFile,
   UploadedFiles,
@@ -22,6 +22,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { MoviesService } from './movies.service';
@@ -34,7 +35,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateMovieFileDto } from './dto/create-movie-file.dto';
 import { OptionalJwtGuard } from '../../common/guards/optional-jwt.guard';
-import { MovieType } from '@prisma/client';
+import { MovieQuality, MovieType } from '@prisma/client';
+
 
 
 
@@ -43,23 +45,33 @@ import { MovieType } from '@prisma/client';
 @UseGuards(OptionalJwtGuard)
 export class MoviesController {
   constructor(private readonly moviesService: MoviesService) {}
+
+  @Get('files')
+  @ApiOperation({ summary: 'Get movie file by movieId and quality', description: 'Access: PUBLIC (subscription checked). Use AUTO for highest available quality.' })
+  @ApiQuery({ name: 'movieId', required: true, type: Number, example: 1 })
+  @ApiQuery({ name: 'quality', required: true, enum: ['AUTO', 'P240', 'P360', 'P480', 'P720', 'P1080', 'P4K'] })
+  getMovieFile(
+    @Query('movieId', ParseIntPipe) movieId: number,
+    @Query('quality') quality: string,
+    @CurrentUser('sub') profileId: number | null,
+    @CurrentUser('role') role: string | null,
+  ) {
+    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+    return this.moviesService.getMovieFile(movieId, quality, profileId, isAdmin);
+  }
   
   @Get()
-  @ApiOperation({ summary: 'Barcha kinolar (pagination, search, filter)', description: 'Access: PUBLIC' })
+  @ApiOperation({ summary: 'Kinolar (pagination, search, filter, slug)', description: 'Access: PUBLIC. If slug is provided, returns single movie detail.' })
   findAll(
     @Query() query: QueryMovieDto,
     @CurrentUser('sub') profileId: number | null,
+    @CurrentUser('role') role: string | null,
   ) {
-    return this.moviesService.findAll(query, profileId);
-  }
-  
-  @Get(':slug')
-  @ApiOperation({ summary: "Kinoni slug bo'yicha olish", description: 'Access: PUBLIC' })
-  findBySlug(
-    @Param('slug') slug: string,
-    @CurrentUser('sub') profileId: number | null,
-  ) {
-    return this.moviesService.findBySlug(slug, profileId);
+    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+    if (query.slug) {
+      return this.moviesService.findBySlug(query.slug, profileId, isAdmin);
+    }
+    return this.moviesService.findAll(query, profileId, isAdmin);
   }
 }
 
@@ -83,6 +95,7 @@ export class AdminMoviesController {
     return this.moviesService.findOne(id);
   }
   
+  @Post()
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -92,8 +105,11 @@ export class AdminMoviesController {
       {
         storage: diskStorage({
           destination: (req, file, cb) => {
-            if (file.fieldname === 'poster') cb(null, 'uploads/posters');
-            else cb(null, 'uploads/videos');
+            const tempDir = 'uploads/temp';
+            if (!require('fs').existsSync(tempDir)) {
+              require('fs').mkdirSync(tempDir, { recursive: true });
+            }
+            cb(null, tempDir);
           },
           filename: (req, file, cb) => {
             const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -102,13 +118,6 @@ export class AdminMoviesController {
         }),
       },
     ),
-  )
-  @Post()
-  @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'poster', maxCount: 1 },
-      { name: 'video', maxCount: 1 },
-    ]),
   )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -159,7 +168,7 @@ export class AdminMoviesController {
     return this.moviesService.create(dto, userId, poster, video);
   }
 
-  @Patch(':id')
+  @Put(':id')
   @ApiOperation({ summary: 'Admin: kinoni yangilash', description: 'Access: ADMIN, SUPERADMIN' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMovieDto) {
     return this.moviesService.update(id, dto);
@@ -172,17 +181,42 @@ export class AdminMoviesController {
   }
 
   @Post(':id/files')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const tempDir = 'uploads/temp';
+          if (!require('fs').existsSync(tempDir)) {
+            require('fs').mkdirSync(tempDir, { recursive: true });
+          }
+          cb(null, tempDir);
+        },
+        filename: (req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          cb(null, `${unique}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'quality'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        quality: { type: 'string', enum: ['P240', 'P360', 'P480', 'P720', 'P1080', 'P4K'] },
+        language: { type: 'string', example: 'uz', default: 'uzbek' },
+      },
+    },
+  })
   @ApiOperation({ summary: "Admin: kino fayli qo'shish", description: 'Access: ADMIN, SUPERADMIN' })
-  addFile(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateMovieFileDto) {
-    return this.moviesService.addMovieFile(id, dto);
-  }
-
-  @Post(':id/upload')
-  @ApiOperation({ summary: 'Admin: kino videosini yuklash va sifatlarga bo‘lish', description: 'Access: ADMIN, SUPERADMIN' })
-  @UseInterceptors(FileInterceptor('file'))
-  uploadVideo(@Param('id', ParseIntPipe) id: number, @UploadedFile() file: Express.Multer.File) {
+  addFile(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: CreateMovieFileDto,
+  ) {
     if (!file) throw new BadRequestException('Fayl yuklanmagan');
-    return this.moviesService.processMovieUpload(id, file);
+    return this.moviesService.addMovieFileWithUpload(id, file, dto);
   }
 }
-

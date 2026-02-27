@@ -219,9 +219,10 @@ model MovieFile {
 }
 
 model Favorite {
-  id      Int      @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   profileId Int
-  movieId  Int
+  movieId   Int
+  createdAt DateTime @default(now())
 
   profile Profile @relation(fields: [profileId], references: [id])
   movie Movies @relation(fields: [movieId], references: [id])

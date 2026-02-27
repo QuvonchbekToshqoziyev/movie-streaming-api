@@ -36,6 +36,6 @@ export class JwtAuthGuard implements CanActivate {
     if (authHeader?.startsWith('Bearer ')) {
       return authHeader.slice(7);
     }
-    return request.cookies?.access_token;
+    return request.cookies?.auth_token;
   }
 }

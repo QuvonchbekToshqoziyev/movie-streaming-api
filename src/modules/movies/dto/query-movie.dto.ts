@@ -40,4 +40,12 @@ export class QueryMovieDto {
   @IsString()
   @IsOptional()
   subscription_type?: string;
+
+  @ApiPropertyOptional({
+    example: 'the-dark-knight',
+    description: 'Get single movie by slug (returns detailed view)',
+  })
+  @IsString()
+  @IsOptional()
+  slug?: string;
 }

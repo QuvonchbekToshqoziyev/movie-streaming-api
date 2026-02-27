@@ -26,6 +26,10 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Ruxsat berilmagan');
     }
 
+    if (user.role.toUpperCase() === 'SUPERADMIN') {
+      return true;
+    }
+
     const hasRole = requiredRoles.some(
       (role) => user.role.toUpperCase() === role.toUpperCase(),
     );

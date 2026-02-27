@@ -17,8 +17,8 @@ export class CreateMovieFileDto {
   @IsOptional()
   language?: string = 'uzbek';
 
-  @ApiProperty({ example: 'https://example.com/movies/film-p720.mp4' })
+  @ApiPropertyOptional({ example: 'https://example.com/movies/film-p720.mp4' })
   @IsString()
-  @IsNotEmpty()
-  fileUrl!: string;
+  @IsOptional()
+  fileUrl?: string;
 }

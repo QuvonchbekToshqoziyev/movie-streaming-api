@@ -60,13 +60,11 @@ export class CreateMovieDto {
     if (Array.isArray(value)) return value.map((v) => Number(v));
 
     if (typeof value === 'string') {
-      // try JSON first: "[1,2]"
       try {
         const parsed = JSON.parse(value);
         if (Array.isArray(parsed)) return parsed.map((v) => Number(v));
-      } catch {
-        // fallback: "1,2"
-      }
+      } catch {}
+
 
       return value
         .replace(/[\[\]\s]/g, '')

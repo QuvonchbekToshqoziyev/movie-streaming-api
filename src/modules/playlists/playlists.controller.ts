@@ -12,12 +12,15 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PlaylistService } from './playlists.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreatePlaylistDto, UpdatePlaylistDto } from './dto/create-playlist.dto';
 
 @ApiTags('Playlist')
 @Controller('playlists')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('USER')
 @ApiBearerAuth('access-token')
 export class PlaylistController {
   constructor(private readonly playlistService: PlaylistService) {}

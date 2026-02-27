@@ -12,11 +12,14 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { WatchHistoryService } from './watch-history.service';
 import { CreateWatchHistoryDto } from './dto/create-watch-history.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Watch History')
 @Controller('watch-history')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('USER')
 @ApiBearerAuth('access-token')
 export class WatchHistoryController {
   constructor(private readonly watchHistoryService: WatchHistoryService) { }

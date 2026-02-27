@@ -76,7 +76,14 @@ export class MoviesService {
     });
     const slug = exists ? `${baseSlug}-${Date.now()}` : baseSlug;
 
-    const posterUrl = `/uploads/posters/${posterFile.filename}`;
+    const movieDir = path.join(this.UPLOAD_ROOT, 'movies', slug);
+    fs.mkdirSync(movieDir, { recursive: true });
+
+    const posterExt = path.extname(posterFile.originalname);
+    const posterName = `poster${posterExt}`;
+    const posterDest = path.join(movieDir, posterName);
+    fs.renameSync(posterFile.path, posterDest);
+    const posterUrl = `/uploads/movies/${slug}/${posterName}`;
 
     const meta = await this.videoProcessor.getVideoMetadata(videoFile.path);
     const duration = meta.duration;
@@ -118,11 +125,89 @@ export class MoviesService {
     };
   }
 
-  async findAll(query: QueryMovieDto, profileId: number | null = null) {
+  private readonly QUALITY_ORDER: MovieQuality[] = [
+    MovieQuality.P4K,
+    MovieQuality.P1080,
+    MovieQuality.P720,
+    MovieQuality.P480,
+    MovieQuality.P360,
+    MovieQuality.P240,
+  ];
+
+  private getMaxQuality(files: { quality: MovieQuality }[]): MovieQuality | null {
+    if (!files.length) return null;
+    for (const q of this.QUALITY_ORDER) {
+      if (files.some((f) => f.quality === q)) return q;
+    }
+    return files[0].quality;
+  }
+
+  async getMovieFile(movieId: number, quality: string, profileId: number | null = null, isAdmin = false) {
+    const movie = await this.prisma.movies.findUnique({ where: { id: movieId } });
+    if (!movie) throw new NotFoundException(`Kino #${movieId} topilmadi`);
+
+    let allowedQualities: MovieQuality[] = [];
+    if (movie.movieType === MovieType.PAID && !isAdmin) {
+      const activeSub = await this.getActiveSubscription(profileId);
+      if (!activeSub) {
+        throw new ForbiddenException("Bu kinoni ko'rish uchun obuna kerak.");
+      }
+      allowedQualities = activeSub.subscriptionPlan.allowed_qualities as MovieQuality[];
+    }
+
+    if (quality === 'AUTO') {
+      let files = await this.prisma.movieFile.findMany({ where: { movieId } });
+      if (!files.length) throw new NotFoundException('Bu kino uchun fayl topilmadi');
+
+      if (allowedQualities.length > 0) {
+        files = files.filter((f) => allowedQualities.includes(f.quality));
+        if (!files.length) throw new ForbiddenException('Sizning obunangiz uchun ruxsat berilgan sifat topilmadi.');
+      }
+
+      const best = files.sort(
+        (a, b) => this.QUALITY_ORDER.indexOf(a.quality) - this.QUALITY_ORDER.indexOf(b.quality),
+      )[0];
+
+      return {
+        success: true,
+        data: {
+          id: best.id,
+          movieId: best.movieId,
+          quality: best.quality,
+          language: best.language,
+          file_url: best.fileUrl,
+        },
+      };
+    }
+
+    const movieQuality = quality as MovieQuality;
+    if (allowedQualities.length > 0 && !allowedQualities.includes(movieQuality)) {
+      throw new ForbiddenException(`Sizning obunangiz ${quality} sifatiga ruxsat bermaydi.`);
+    }
+
+    const file = await this.prisma.movieFile.findFirst({
+      where: { movieId, quality: movieQuality },
+    });
+    if (!file) throw new NotFoundException(`${quality} sifatdagi fayl topilmadi`);
+
+    return {
+      success: true,
+      data: {
+        id: file.id,
+        movieId: file.movieId,
+        quality: file.quality,
+        language: file.language,
+        file_url: file.fileUrl,
+      },
+    };
+  }
+
+  async findAll(query: QueryMovieDto, profileId: number | null = null, isAdmin = false) {
     const { page = 1, limit = 20, category, search, subscription_type } = query;
     const skip = (page - 1) * limit;
 
-    const activeSub = await this.getActiveSubscription(profileId);
+    const activeSub = isAdmin ? null : await this.getActiveSubscription(profileId);
+    const hasFullAccess = isAdmin || !!activeSub;
 
     const where: any = {};
 
@@ -134,9 +219,9 @@ export class MoviesService {
 
     if (subscription_type) {
       const wantsPaid = subscription_type.toUpperCase() === 'PAID';
-      if (wantsPaid && !activeSub) where.movieType = MovieType.FREE;
+      if (wantsPaid && !hasFullAccess) where.movieType = MovieType.FREE;
       else where.movieType = wantsPaid ? MovieType.PAID : MovieType.FREE;
-    } else if (!activeSub) {
+    } else if (!hasFullAccess) {
       where.movieType = MovieType.FREE;
     }
 
@@ -160,16 +245,21 @@ export class MoviesService {
       success: true,
       data: {
         movies: movies.map((m) => ({
-          ...m,
+          id: m.id,
+          title: m.title,
+          slug: m.slug,
+          poster_url: m.posterUrl,
+          release_year: m.releaseDate.getFullYear(),
+          rating: m.rating,
+          subscription_type: m.movieType === MovieType.FREE ? 'free' : 'premium',
           categories: m.movieCategories.map((mc) => mc.category.name),
-          subscription_type: m.movieType,
         })),
         pagination: { total, page, limit, pages: Math.ceil(total / limit) },
       },
     };
   }
 
-  async findBySlug(slug: string, profileId: number | null = null) {
+  async findBySlug(slug: string, profileId: number | null = null, isAdmin = false) {
     const movie = await this.prisma.movies.findUnique({
       where: { slug },
       include: {
@@ -184,9 +274,9 @@ export class MoviesService {
 
     if (!movie) throw new NotFoundException('Kino topilmadi');
 
-    const activeSub = await this.getActiveSubscription(profileId);
+    const activeSub = isAdmin ? null : await this.getActiveSubscription(profileId);
 
-    if (movie.movieType === MovieType.PAID && !activeSub) {
+    if (movie.movieType === MovieType.PAID && !isAdmin && !activeSub) {
       throw new ForbiddenException("Bu kinoni ko'rish uchun obuna kerak. Iltimos, obuna sotib oling.");
     }
 
@@ -201,23 +291,41 @@ export class MoviesService {
         : 0;
 
     let files = movie.movieFiles;
-    if (activeSub && activeSub.subscriptionPlan.allowed_qualities.length > 0) {
+    if (!isAdmin && activeSub && activeSub.subscriptionPlan.allowed_qualities.length > 0) {
       files = files.filter((f) =>
         activeSub.subscriptionPlan.allowed_qualities.includes(f.quality),
       );
     }
 
+    let is_favorite = false;
+    if (profileId) {
+      const fav = await this.prisma.favorite.findUnique({
+        where: { profileId_movieId: { profileId, movieId: movie.id } },
+      });
+      is_favorite = !!fav;
+    }
+
     return {
       success: true,
       data: {
-        ...movie,
+        id: movie.id,
+        title: movie.title,
+        slug: movie.slug,
+        description: movie.description,
+        release_year: movie.releaseDate.getFullYear(),
+        duration_minutes: movie.duration,
+        poster_url: movie.posterUrl,
+        rating: movie.rating,
+        subscription_type: movie.movieType === MovieType.FREE ? 'free' : 'premium',
+        view_count: movie.viewCount + 1,
+        is_favorite,
         categories: movie.movieCategories.map((mc) => mc.category.name),
-        subscription_type: movie.movieType,
         files: files.map((f) => ({
           quality: f.quality,
           language: f.language,
           file_url: f.fileUrl,
         })),
+        max_quality: this.getMaxQuality(files),
         reviews: {
           average_rating: Math.round(avgRating * 10) / 10,
           count: movie.reviews.length,
@@ -324,6 +432,27 @@ export class MoviesService {
     return { success: true, message: 'Kino fayli muvaffaqiyatli yuklandi', data: file };
   }
 
+  async addMovieFileWithUpload(
+    movieId: number,
+    file: Express.Multer.File,
+    dto: { quality: MovieQuality; language?: string },
+  ) {
+    const movie = await this.findOne(movieId);
+    const movieDir = path.join(this.UPLOAD_ROOT, 'movies', movie.slug);
+    fs.mkdirSync(movieDir, { recursive: true });
+
+    const fileName = `${dto.quality.toLowerCase()}${path.extname(file.originalname)}`;
+    const destPath = path.join(movieDir, fileName);
+    fs.renameSync(file.path, destPath);
+    const fileUrl = `/uploads/movies/${movie.slug}/${fileName}`;
+
+    return this.addMovieFile(movieId, {
+      quality: dto.quality,
+      language: dto.language,
+      fileUrl,
+    });
+  }
+
   async processMovieUpload(movieId: number, file: Express.Multer.File) {
     const movie = await this.findOne(movieId);
     const movieDir = path.join(this.UPLOAD_ROOT, 'movies', movie.slug);
@@ -363,7 +492,6 @@ export class MoviesService {
           }
         }
 
-        // cleanup original
         if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
       })
       .catch((err) => {

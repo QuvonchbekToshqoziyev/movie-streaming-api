@@ -10,20 +10,15 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.use(cookieParser());
-  app.useStaticAssets(join(__dirname, '..', 'public'));
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
   app.setGlobalPrefix('api', { exclude: [] });
   app.useGlobalPipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    transformOptions: { enableImplicitConversion: true },
-  }),
-);
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-    app.useStaticAssets(join(process.cwd(), 'uploads'), {
-          prefix: '/uploads',
-  });
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
 
 
   const config = new DocumentBuilder()

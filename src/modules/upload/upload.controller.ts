@@ -24,6 +24,8 @@ import {
 import { Response } from 'express';
 import { UploadService } from './upload.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { MovieQuality } from '@prisma/client';
 
 @ApiTags('Uploads')
@@ -32,15 +34,8 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post('posters/:movieId')
-  uploadPoster(
-    @Param('movieId', ParseIntPipe) movieId: number,
-    @UploadedFile(posterFilePipe) file: Express.Multer.File, // 👈 add here
-  ) {
-    return this.uploadService.savePoster(movieId, file);
-  }
-
-  @Post('posters/:movieId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
@@ -54,10 +49,17 @@ export class UploadController {
   })
   @ApiOperation({
     summary: 'Kino posteri yuklash',
-    description: 'Access: ADMIN',
+    description: 'Access: ADMIN, SUPERADMIN',
   })
+  uploadPoster(
+    @Param('movieId', ParseIntPipe) movieId: number,
+    @UploadedFile(posterFilePipe) file: Express.Multer.File,
+  ) {
+    return this.uploadService.savePoster(movieId, file);
+  }
+
   @Get('posters/:movieId')
-  @ApiOperation({ summary: 'Kino posterini olish (fayl)' })
+  @ApiOperation({ summary: 'Kino posterini olish (fayl)', description: 'Access: PUBLIC' })
   async servePoster(
     @Param('movieId', ParseIntPipe) movieId: number,
     @Res() res: Response,
@@ -67,7 +69,8 @@ export class UploadController {
   }
 
   @Post('videos/:movieId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
   @ApiBearerAuth('access-token')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
@@ -83,13 +86,22 @@ export class UploadController {
   })
   @ApiOperation({
     summary: 'Kino video faylini yuklash',
-    description: 'Access: ADMIN',
+    description: 'Access: ADMIN, SUPERADMIN',
   })
+  uploadVideo(
+    @Param('movieId', ParseIntPipe) movieId: number,
+    @UploadedFile(videoFilePipe) file: Express.Multer.File,
+    @Body('quality') quality: string,
+    @Body('language') language: string = 'uzbek',
+  ) {
+    const parsedQuality = this.uploadService.parseQuality(quality);
+    return this.uploadService.saveVideo(movieId, parsedQuality, language, file);
+  }
 
   @Get('videos/:movieId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Kino videosini olish (movieId + quality)' })
+  @ApiOperation({ summary: 'Kino videosini olish (movieId + quality)', description: 'Access: Authenticated' })
   @ApiQuery({ name: 'quality', enum: MovieQuality, required: true })
   async serveVideoByMovie(
     @Param('movieId', ParseIntPipe) movieId: number,
@@ -104,11 +116,10 @@ export class UploadController {
     return res.download(filePath);
   }
 
-
   @Get('files/:fileId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Kino videosini olish (fileId)' })
+  @ApiOperation({ summary: 'Kino videosini olish (fileId)', description: 'Access: Authenticated' })
   async serveVideoById(
     @Param('fileId', ParseIntPipe) fileId: number,
     @Res() res: Response,
@@ -116,15 +127,5 @@ export class UploadController {
     const { path, filename } =
       await this.uploadService.getVideoPathById(fileId);
     return res.download(path, filename);
-  }
-  @Post('videos/:movieId')
-  uploadVideo(
-    @Param('movieId', ParseIntPipe) movieId: number,
-    @UploadedFile(videoFilePipe) file: Express.Multer.File, // 👈 add here
-    @Body('quality') quality: string,
-    @Body('language') language: string = 'uzbek',
-  ) {
-    const parsedQuality = this.uploadService.parseQuality(quality);
-    return this.uploadService.saveVideo(movieId, parsedQuality, language, file);
   }
 }

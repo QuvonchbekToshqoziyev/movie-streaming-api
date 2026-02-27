@@ -20,13 +20,15 @@ export class CategoriesService {
         'Kategoriya nomi yoki slug allaqachon mavjud',
       );
 
-    return this.prisma.category.create({ data: dto });
+    const category = await this.prisma.category.create({ data: dto });
+    return { success: true, data: category };
   }
 
-  findAll() {
-    return this.prisma.category.findMany({
+  async findAll() {
+    const categories = await this.prisma.category.findMany({
       include: { _count: { select: { movieCategories: true } } },
     });
+    return { success: true, data: categories };
   }
 
   async findOne(id: number) {
@@ -35,12 +37,13 @@ export class CategoriesService {
       include: { _count: { select: { movieCategories: true } } },
     });
     if (!category) throw new NotFoundException(`Kategoriya #${id} topilmadi`);
-    return category;
+    return { success: true, data: category };
   }
 
   async update(id: number, dto: UpdateCategoryDto) {
     await this.findOne(id);
-    return this.prisma.category.update({ where: { id }, data: dto });
+    const category = await this.prisma.category.update({ where: { id }, data: dto });
+    return { success: true, message: 'Kategoriya muvaffaqiyatli yangilandi', data: category };
   }
 
   async remove(id: number) {

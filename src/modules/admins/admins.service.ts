@@ -20,7 +20,7 @@ export class AdminsService {
       throw new ConflictException('Email or username already exists');
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    return this.prisma.user.create({
+    const admin = await this.prisma.user.create({
       data: { ...dto, password: hashedPassword },
       select: {
         id: true,
@@ -31,10 +31,11 @@ export class AdminsService {
         createdAt: true,
       },
     });
+    return { success: true, data: admin };
   }
 
-  findAll() {
-    return this.prisma.user.findMany({
+  async findAll() {
+    const admins = await this.prisma.user.findMany({
       select: {
         id: true,
         username: true,
@@ -44,6 +45,7 @@ export class AdminsService {
         createdAt: true,
       },
     });
+    return { success: true, data: admins };
   }
 
   async findOne(id: number) {
@@ -59,14 +61,14 @@ export class AdminsService {
       },
     });
     if (!admin) throw new NotFoundException(`Admin #${id} not found`);
-    return admin;
+    return { success: true, data: admin };
   }
 
   async update(id: number, dto: UpdateAdminDto) {
     await this.findOne(id);
     const data: any = { ...dto };
     if (dto.password) data.password = await bcrypt.hash(dto.password, 10);
-    return this.prisma.user.update({
+    const admin = await this.prisma.user.update({
       where: { id },
       data,
       select: {
@@ -78,11 +80,12 @@ export class AdminsService {
         updatedAt: true,
       },
     });
+    return { success: true, data: admin };
   }
 
   async remove(id: number) {
     await this.findOne(id);
     await this.prisma.user.delete({ where: { id } });
-    return { message: `Admin #${id} deleted successfully` };
+    return { success: true, message: `Admin #${id} deleted successfully` };
   }
 }

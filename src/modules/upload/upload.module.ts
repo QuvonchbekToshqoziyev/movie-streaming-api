@@ -32,7 +32,7 @@ const VIDEO_DIR = join(UPLOAD_ROOT, 'videos');
         },
       }),
       limits: {
-        fileSize: 4 * 1024 * 1024 * 1024, // 4GB max for videos
+        fileSize: 4 * 1024 * 1024 * 1024,
       },
     }),
   ],
